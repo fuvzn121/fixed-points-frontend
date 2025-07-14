@@ -1,4 +1,4 @@
-import { Box, Container, Heading, Text, Stack, Button, SimpleGrid, Card, CardBody, Image } from '@chakra-ui/react'
+import { Box, Container, Heading, Text, Stack, Button, SimpleGrid, Image } from '@chakra-ui/react'
 import { useState } from 'react'
 
 interface Agent {
@@ -160,27 +160,33 @@ function App() {
             <Heading as="h2" size="lg" mb={4}>エージェント一覧</Heading>
             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
               {agents.map((agent) => (
-                <Card key={agent.uuid}>
-                  <CardBody>
-                    <Stack gap={3}>
-                      <Image
-                        src={agent.displayIcon}
-                        alt={agent.displayName}
-                        borderRadius="lg"
-                        boxSize="100px"
-                        objectFit="cover"
-                        mx="auto"
-                      />
-                      <Heading size="md" textAlign="center">{agent.displayName}</Heading>
-                      {agent.role && (
-                        <Text fontSize="sm" color="gray.600" textAlign="center">
-                          {agent.role.displayName}
-                        </Text>
-                      )}
-                      <Text fontSize="sm" noOfLines={3}>{agent.description}</Text>
-                    </Stack>
-                  </CardBody>
-                </Card>
+                <Box
+                  key={agent.uuid}
+                  p={5}
+                  borderWidth={1}
+                  borderRadius="lg"
+                  boxShadow="sm"
+                  bg="white"
+                  _hover={{ boxShadow: "md" }}
+                >
+                  <Stack gap={3}>
+                    <Image
+                      src={agent.displayIcon}
+                      alt={agent.displayName}
+                      borderRadius="lg"
+                      boxSize="100px"
+                      objectFit="cover"
+                      mx="auto"
+                    />
+                    <Heading size="md" textAlign="center">{agent.displayName}</Heading>
+                    {agent.role && (
+                      <Text fontSize="sm" color="gray.600" textAlign="center">
+                        {agent.role.displayName}
+                      </Text>
+                    )}
+                    <Text fontSize="sm" noOfLines={3}>{agent.description}</Text>
+                  </Stack>
+                </Box>
               ))}
             </SimpleGrid>
           </Box>
@@ -192,21 +198,27 @@ function App() {
             <Heading as="h2" size="lg" mb={4}>マップ一覧</Heading>
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               {maps.map((map) => (
-                <Card key={map.uuid}>
-                  <CardBody>
-                    <Stack gap={3}>
-                      <Image
-                        src={map.splash}
-                        alt={map.displayName}
-                        borderRadius="lg"
-                        height="200px"
-                        objectFit="cover"
-                      />
-                      <Heading size="md">{map.displayName}</Heading>
-                      <Text fontSize="sm" color="gray.600">{map.coordinates}</Text>
-                    </Stack>
-                  </CardBody>
-                </Card>
+                <Box
+                  key={map.uuid}
+                  p={5}
+                  borderWidth={1}
+                  borderRadius="lg"
+                  boxShadow="sm"
+                  bg="white"
+                  _hover={{ boxShadow: "md" }}
+                >
+                  <Stack gap={3}>
+                    <Image
+                      src={map.splash}
+                      alt={map.displayName}
+                      borderRadius="lg"
+                      height="200px"
+                      objectFit="cover"
+                    />
+                    <Heading size="md">{map.displayName}</Heading>
+                    <Text fontSize="sm" color="gray.600">{map.coordinates}</Text>
+                  </Stack>
+                </Box>
               ))}
             </SimpleGrid>
           </Box>
