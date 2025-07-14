@@ -1,4 +1,3 @@
-import { Box, Container, Heading, Text, Stack, Button } from '@chakra-ui/react'
 import { useState } from 'react'
 
 interface Agent {
@@ -101,133 +100,154 @@ function App() {
   }
 
   return (
-    <Container maxW="container.xl" py={10}>
-      <Stack gap={8}>
-        <Heading as="h1" size="2xl">
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <h1 style={{ fontSize: '48px', margin: 0 }}>
           Fixed Points Frontend
-        </Heading>
-        <Text fontSize="lg" textAlign="center">
+        </h1>
+        <p style={{ fontSize: '18px', textAlign: 'center', margin: 0 }}>
           React + TypeScript + Chakra UIで構築されたフロントエンドアプリケーション
-        </Text>
-        <Stack direction="row" gap={4} justifyContent="center">
-          <Button 
-            colorScheme="blue" 
+        </p>
+        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+          <button 
             onClick={checkBackendConnection}
-            isLoading={isLoading}
-            loadingText="接続中..."
+            disabled={isLoading}
+            style={{
+              backgroundColor: '#3182ce',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              border: 'none',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.6 : 1
+            }}
           >
-            バックエンド接続テスト
-          </Button>
-          <Button 
-            colorScheme="purple" 
+            {isLoading ? '接続中...' : 'バックエンド接続テスト'}
+          </button>
+          <button 
             onClick={fetchAgents}
-            isLoading={isLoading}
-            loadingText="取得中..."
+            disabled={isLoading}
+            style={{
+              backgroundColor: '#805ad5',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              border: 'none',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.6 : 1
+            }}
           >
-            エージェント一覧
-          </Button>
-          <Button 
-            colorScheme="green" 
+            {isLoading ? '取得中...' : 'エージェント一覧'}
+          </button>
+          <button 
             onClick={fetchMaps}
-            isLoading={isLoading}
-            loadingText="取得中..."
+            disabled={isLoading}
+            style={{
+              backgroundColor: '#38a169',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              border: 'none',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              opacity: isLoading ? 0.6 : 1
+            }}
           >
-            マップ一覧
-          </Button>
-        </Stack>
+            {isLoading ? '取得中...' : 'マップ一覧'}
+          </button>
+        </div>
         {apiStatus && (
-          <Box 
-            p={4} 
-            borderRadius="md" 
-            bg={apiStatus.isError ? 'red.50' : 'green.50'}
-            borderWidth={1}
-            borderColor={apiStatus.isError ? 'red.200' : 'green.200'}
-          >
-            <Text 
-              fontSize="md" 
-              textAlign="center" 
-              color={apiStatus.isError ? 'red.600' : 'green.600'}
-              fontWeight="medium"
-            >
-              {apiStatus.message}
-            </Text>
-          </Box>
+          <div style={{
+            padding: '16px',
+            borderRadius: '8px',
+            backgroundColor: apiStatus.isError ? '#fed7d7' : '#c6f6d5',
+            border: `1px solid ${apiStatus.isError ? '#fc8181' : '#68d391'}`,
+            color: apiStatus.isError ? '#c53030' : '#276749',
+            textAlign: 'center',
+            fontWeight: 500
+          }}>
+            {apiStatus.message}
+          </div>
         )}
         
         {/* エージェント表示 */}
         {showData === 'agents' && agents.length > 0 && (
-          <Box>
-            <Heading as="h2" size="lg" mb={4}>エージェント一覧</Heading>
-            <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
+          <div>
+            <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>エージェント一覧</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
               {agents.map((agent) => (
-                <Box
+                <div
                   key={agent.uuid}
-                  p={5}
-                  borderWidth={1}
-                  borderRadius="lg"
-                  boxShadow="sm"
-                  bg="white"
-                  _hover={{ boxShadow: "md" }}
+                  style={{
+                    padding: '20px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    backgroundColor: 'white',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  }}
                 >
-                  <Stack gap={3}>
-                    <Box
-                      as="img"
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <img
                       src={agent.displayIcon}
                       alt={agent.displayName}
-                      borderRadius="lg"
-                      boxSize="100px"
-                      objectFit="cover"
-                      mx="auto"
+                      style={{
+                        width: '100px',
+                        height: '100px',
+                        borderRadius: '8px',
+                        objectFit: 'cover',
+                        margin: '0 auto'
+                      }}
                     />
-                    <Heading size="md" textAlign="center">{agent.displayName}</Heading>
+                    <h3 style={{ fontSize: '20px', textAlign: 'center', margin: 0 }}>{agent.displayName}</h3>
                     {agent.role && (
-                      <Text fontSize="sm" color="gray.600" textAlign="center">
+                      <p style={{ fontSize: '14px', color: '#718096', textAlign: 'center', margin: 0 }}>
                         {agent.role.displayName}
-                      </Text>
+                      </p>
                     )}
-                    <Text fontSize="sm" noOfLines={3}>{agent.description}</Text>
-                  </Stack>
-                </Box>
+                    <p style={{ fontSize: '14px', margin: 0 }}>{agent.description}</p>
+                  </div>
+                </div>
               ))}
-            </Box>
-          </Box>
+            </div>
+          </div>
         )}
         
         {/* マップ表示 */}
         {showData === 'maps' && maps.length > 0 && (
-          <Box>
-            <Heading as="h2" size="lg" mb={4}>マップ一覧</Heading>
-            <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(400px, 1fr))" gap={4}>
+          <div>
+            <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>マップ一覧</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '16px' }}>
               {maps.map((map) => (
-                <Box
+                <div
                   key={map.uuid}
-                  p={5}
-                  borderWidth={1}
-                  borderRadius="lg"
-                  boxShadow="sm"
-                  bg="white"
-                  _hover={{ boxShadow: "md" }}
+                  style={{
+                    padding: '20px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    backgroundColor: 'white',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                  }}
                 >
-                  <Stack gap={3}>
-                    <Box
-                      as="img"
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <img
                       src={map.splash}
                       alt={map.displayName}
-                      borderRadius="lg"
-                      height="200px"
-                      width="100%"
-                      objectFit="cover"
+                      style={{
+                        width: '100%',
+                        height: '200px',
+                        borderRadius: '8px',
+                        objectFit: 'cover'
+                      }}
                     />
-                    <Heading size="md">{map.displayName}</Heading>
-                    <Text fontSize="sm" color="gray.600">{map.coordinates}</Text>
-                  </Stack>
-                </Box>
+                    <h3 style={{ fontSize: '20px', margin: 0 }}>{map.displayName}</h3>
+                    <p style={{ fontSize: '14px', color: '#718096', margin: 0 }}>{map.coordinates}</p>
+                  </div>
+                </div>
               ))}
-            </Box>
-          </Box>
+            </div>
+          </div>
         )}
-      </Stack>
-    </Container>
+      </div>
+    </div>
   )
 }
 
