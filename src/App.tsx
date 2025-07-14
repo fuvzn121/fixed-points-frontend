@@ -1,10 +1,9 @@
-import { Box, Container, Heading, Text, Stack, Button, useToast } from '@chakra-ui/react'
+import { Box, Container, Heading, Text, Stack, Button } from '@chakra-ui/react'
 import { useState } from 'react'
 
 function App() {
   const [isLoading, setIsLoading] = useState(false)
-  const [apiStatus, setApiStatus] = useState<string | null>(null)
-  const toast = useToast()
+  const [apiStatus, setApiStatus] = useState<{ message: string; isError: boolean } | null>(null)
 
   const checkBackendConnection = async () => {
     setIsLoading(true)
@@ -13,23 +12,15 @@ function App() {
       const data = await response.json()
       
       if (response.ok) {
-        setApiStatus(`バックエンド接続成功！ ステータス: ${data.status}`)
-        toast({
-          title: 'API接続成功',
-          description: 'バックエンドとの通信が確認できました！',
-          status: 'success',
-          duration: 3000,
-          isClosable: true,
+        setApiStatus({
+          message: `バックエンド接続成功！ ステータス: ${data.status}`,
+          isError: false
         })
       }
     } catch (error) {
-      setApiStatus('バックエンド接続エラー')
-      toast({
-        title: 'API接続エラー',
-        description: 'バックエンドサーバーが起動していることを確認してください',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
+      setApiStatus({
+        message: 'バックエンド接続エラー: サーバーが起動していることを確認してください',
+        isError: true
       })
     } finally {
       setIsLoading(false)
@@ -56,9 +47,22 @@ function App() {
           </Button>
         </Box>
         {apiStatus && (
-          <Text fontSize="md" textAlign="center" color={apiStatus.includes('成功') ? 'green.500' : 'red.500'}>
-            {apiStatus}
-          </Text>
+          <Box 
+            p={4} 
+            borderRadius="md" 
+            bg={apiStatus.isError ? 'red.50' : 'green.50'}
+            borderWidth={1}
+            borderColor={apiStatus.isError ? 'red.200' : 'green.200'}
+          >
+            <Text 
+              fontSize="md" 
+              textAlign="center" 
+              color={apiStatus.isError ? 'red.600' : 'green.600'}
+              fontWeight="medium"
+            >
+              {apiStatus.message}
+            </Text>
+          </Box>
         )}
       </Stack>
     </Container>
