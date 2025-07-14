@@ -1,9 +1,31 @@
-import { Box, Container, Heading, Text, Stack, Button } from '@chakra-ui/react'
+import { Box, Container, Heading, Text, Stack, Button, SimpleGrid, Card, CardBody, Image } from '@chakra-ui/react'
 import { useState } from 'react'
+
+interface Agent {
+  uuid: string
+  displayName: string
+  description: string
+  displayIcon: string
+  role: {
+    uuid: string
+    displayName: string
+  } | null
+}
+
+interface Map {
+  uuid: string
+  displayName: string
+  coordinates: string
+  displayIcon: string
+  splash: string
+}
 
 function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [apiStatus, setApiStatus] = useState<{ message: string; isError: boolean } | null>(null)
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [maps, setMaps] = useState<Map[]>([])
+  const [showData, setShowData] = useState<'none' | 'agents' | 'maps'>('none')
 
   const checkBackendConnection = async () => {
     setIsLoading(true)
@@ -28,6 +50,56 @@ function App() {
     }
   }
 
+  const fetchAgents = async () => {
+    setIsLoading(true)
+    setShowData('agents')
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/valorant/agents`)
+      const data = await response.json()
+      
+      if (response.ok) {
+        setAgents(data)
+        setApiStatus({
+          message: `${data.length}人のエージェントを取得しました！`,
+          isError: false
+        })
+      }
+    } catch (error) {
+      setApiStatus({
+        message: 'エージェント取得エラー',
+        isError: true
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchMaps = async () => {
+    setIsLoading(true)
+    setShowData('maps')
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/valorant/maps`)
+      const data = await response.json()
+      
+      if (response.ok) {
+        setMaps(data)
+        setApiStatus({
+          message: `${data.length}個のマップを取得しました！`,
+          isError: false
+        })
+      }
+    } catch (error) {
+      setApiStatus({
+        message: 'マップ取得エラー',
+        isError: true
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <Container maxW="container.xl" py={10}>
       <Stack gap={8}>
@@ -37,7 +109,7 @@ function App() {
         <Text fontSize="lg" textAlign="center">
           React + TypeScript + Chakra UIで構築されたフロントエンドアプリケーション
         </Text>
-        <Box>
+        <Stack direction="row" gap={4} justifyContent="center">
           <Button 
             colorScheme="blue" 
             onClick={checkBackendConnection}
@@ -46,7 +118,23 @@ function App() {
           >
             バックエンド接続テスト
           </Button>
-        </Box>
+          <Button 
+            colorScheme="purple" 
+            onClick={fetchAgents}
+            isLoading={isLoading}
+            loadingText="取得中..."
+          >
+            エージェント一覧
+          </Button>
+          <Button 
+            colorScheme="green" 
+            onClick={fetchMaps}
+            isLoading={isLoading}
+            loadingText="取得中..."
+          >
+            マップ一覧
+          </Button>
+        </Stack>
         {apiStatus && (
           <Box 
             p={4} 
@@ -63,6 +151,64 @@ function App() {
             >
               {apiStatus.message}
             </Text>
+          </Box>
+        )}
+        
+        {/* エージェント表示 */}
+        {showData === 'agents' && agents.length > 0 && (
+          <Box>
+            <Heading as="h2" size="lg" mb={4}>エージェント一覧</Heading>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+              {agents.map((agent) => (
+                <Card key={agent.uuid}>
+                  <CardBody>
+                    <Stack gap={3}>
+                      <Image
+                        src={agent.displayIcon}
+                        alt={agent.displayName}
+                        borderRadius="lg"
+                        boxSize="100px"
+                        objectFit="cover"
+                        mx="auto"
+                      />
+                      <Heading size="md" textAlign="center">{agent.displayName}</Heading>
+                      {agent.role && (
+                        <Text fontSize="sm" color="gray.600" textAlign="center">
+                          {agent.role.displayName}
+                        </Text>
+                      )}
+                      <Text fontSize="sm" noOfLines={3}>{agent.description}</Text>
+                    </Stack>
+                  </CardBody>
+                </Card>
+              ))}
+            </SimpleGrid>
+          </Box>
+        )}
+        
+        {/* マップ表示 */}
+        {showData === 'maps' && maps.length > 0 && (
+          <Box>
+            <Heading as="h2" size="lg" mb={4}>マップ一覧</Heading>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              {maps.map((map) => (
+                <Card key={map.uuid}>
+                  <CardBody>
+                    <Stack gap={3}>
+                      <Image
+                        src={map.splash}
+                        alt={map.displayName}
+                        borderRadius="lg"
+                        height="200px"
+                        objectFit="cover"
+                      />
+                      <Heading size="md">{map.displayName}</Heading>
+                      <Text fontSize="sm" color="gray.600">{map.coordinates}</Text>
+                    </Stack>
+                  </CardBody>
+                </Card>
+              ))}
+            </SimpleGrid>
           </Box>
         )}
       </Stack>
