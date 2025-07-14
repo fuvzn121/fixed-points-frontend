@@ -1,4 +1,4 @@
-import { Box, Container, Heading, Text, Stack, Button, SimpleGrid, Image } from '@chakra-ui/react'
+import { Box, Container, Heading, Text, Stack, Button } from '@chakra-ui/react'
 import { useState } from 'react'
 
 interface Agent {
@@ -158,7 +158,7 @@ function App() {
         {showData === 'agents' && agents.length > 0 && (
           <Box>
             <Heading as="h2" size="lg" mb={4}>エージェント一覧</Heading>
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
+            <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(300px, 1fr))" gap={4}>
               {agents.map((agent) => (
                 <Box
                   key={agent.uuid}
@@ -170,7 +170,8 @@ function App() {
                   _hover={{ boxShadow: "md" }}
                 >
                   <Stack gap={3}>
-                    <Image
+                    <Box
+                      as="img"
                       src={agent.displayIcon}
                       alt={agent.displayName}
                       borderRadius="lg"
@@ -188,7 +189,7 @@ function App() {
                   </Stack>
                 </Box>
               ))}
-            </SimpleGrid>
+            </Box>
           </Box>
         )}
         
@@ -196,7 +197,7 @@ function App() {
         {showData === 'maps' && maps.length > 0 && (
           <Box>
             <Heading as="h2" size="lg" mb={4}>マップ一覧</Heading>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+            <Box display="grid" gridTemplateColumns="repeat(auto-fill, minmax(400px, 1fr))" gap={4}>
               {maps.map((map) => (
                 <Box
                   key={map.uuid}
@@ -208,11 +209,13 @@ function App() {
                   _hover={{ boxShadow: "md" }}
                 >
                   <Stack gap={3}>
-                    <Image
+                    <Box
+                      as="img"
                       src={map.splash}
                       alt={map.displayName}
                       borderRadius="lg"
                       height="200px"
+                      width="100%"
                       objectFit="cover"
                     />
                     <Heading size="md">{map.displayName}</Heading>
@@ -220,7 +223,7 @@ function App() {
                   </Stack>
                 </Box>
               ))}
-            </SimpleGrid>
+            </Box>
           </Box>
         )}
       </Stack>
