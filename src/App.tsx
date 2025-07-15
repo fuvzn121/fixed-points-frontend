@@ -2055,9 +2055,9 @@ function App() {
                   padding: '20px',
                   overflowY: 'auto',
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   justifyContent: 'center',
-                  minHeight: '100vh' // 全画面の高さを確保
+                  paddingTop: '10vh'
                 }}
                 onClick={(e) => {
                   // モーダル背景をクリックしたときに閉じる
@@ -2070,7 +2070,7 @@ function App() {
                   position: 'relative',
                   maxWidth: '900px',
                   width: '100%',
-                  maxHeight: '90vh', // 元に戻す
+                  maxHeight: '80vh', // スクロール可能な高さに調整
                   display: 'flex',
                   flexDirection: 'column',
                   background: 'rgba(255, 255, 255, 0.05)', // 元のスタイルに戻す
