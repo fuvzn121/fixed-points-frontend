@@ -58,6 +58,17 @@ interface FixedPoint {
 }
 
 function App() {
+  // 画像URLを処理するヘルパー関数
+  const processImageUrl = (url: string) => {
+    if (!url) return url
+    // ローカルパス（/static/で始まる）の場合はAPIのベースURLを追加
+    if (url.startsWith('/static/')) {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      return `${apiUrl}${url}`
+    }
+    return url
+  }
+
   // プレースホルダーのグローバルスタイルを適用
   useEffect(() => {
     const style = document.createElement('style')
@@ -1117,7 +1128,7 @@ function App() {
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <img
-                      src={agent.displayIcon}
+                      src={processImageUrl(agent.displayIcon)}
                       alt={agent.displayName}
                       style={{
                         width: '100px',
@@ -1164,7 +1175,7 @@ function App() {
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <img
-                      src={map.splash}
+                      src={processImageUrl(map.splash)}
                       alt={map.displayName}
                       style={{
                         width: '100%',
@@ -1264,7 +1275,7 @@ function App() {
                       <div style={{
                         position: 'relative',
                         height: '120px',
-                        background: map ? `url(${map.displayIcon})` : 'linear-gradient(45deg, #1a2332, #0f1419)',
+                        background: map ? `url(${processImageUrl(map.displayIcon)})` : 'linear-gradient(45deg, #1a2332, #0f1419)',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center'
                       }}>
@@ -1292,7 +1303,7 @@ function App() {
                             boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
                           }}>
                             <img 
-                              src={agent.displayIcon} 
+                              src={processImageUrl(agent.displayIcon)} 
                               alt={agent.displayName}
                               style={{ 
                                 width: '100%', 
@@ -1571,7 +1582,7 @@ function App() {
                       }}
                     >
                       <img
-                        src={agent.displayIcon}
+                        src={processImageUrl(agent.displayIcon)}
                         alt={agent.displayName}
                         style={{
                           width: '100%',
@@ -1668,7 +1679,7 @@ function App() {
                       }}
                     >
                       <img
-                        src={map.splash}
+                        src={processImageUrl(map.splash)}
                         alt={map.displayName}
                         style={{
                           width: '100%',
@@ -2245,7 +2256,7 @@ function App() {
                   </button>
                   
                   <InteractiveMap
-                    mapImageUrl={maps.find(m => m.uuid === selectedMap)?.displayIcon || ''}
+                    mapImageUrl={processImageUrl(maps.find(m => m.uuid === selectedMap)?.displayIcon || '')}
                     mapName={maps.find(m => m.uuid === selectedMap)?.displayName || ''}
                     mode={mapMode}
                     startPosition={startPosition}
@@ -2451,7 +2462,7 @@ function App() {
                   </h3>
                   
                   <MapDisplay
-                    mapImageUrl={maps.find(m => m.uuid === selectedFixedPoint.map_id)?.displayIcon || ''}
+                    mapImageUrl={processImageUrl(maps.find(m => m.uuid === selectedFixedPoint.map_id)?.displayIcon || '')}
                     mapName={maps.find(m => m.uuid === selectedFixedPoint.map_id)?.displayName || ''}
                     startPosition={
                       firstStep.position_x !== null && firstStep.position_x !== undefined && 
