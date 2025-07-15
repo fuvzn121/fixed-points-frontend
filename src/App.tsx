@@ -534,29 +534,88 @@ function App() {
   })
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        <h1 style={{ fontSize: '48px', margin: 0 }}>
-          Fixed Points Frontend
-        </h1>
-        <p style={{ fontSize: '18px', textAlign: 'center', margin: 0 }}>
-          React + TypeScript + Chakra UIで構築されたフロントエンドアプリケーション
-        </p>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0f1419 100%)',
+      color: '#ffffff'
+    }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <h1 style={{ 
+              fontSize: '64px', 
+              margin: 0, 
+              background: 'linear-gradient(45deg, #ff4655, #00d4ff)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              fontWeight: '900',
+              textShadow: '0 0 30px rgba(255, 70, 85, 0.5)'
+            }}>
+              VALORANT
+            </h1>
+            <h2 style={{ 
+              fontSize: '32px', 
+              margin: '10px 0 0 0',
+              color: '#ff4655',
+              fontWeight: '700',
+              letterSpacing: '2px'
+            }}>
+              FIXED POINTS
+            </h2>
+          </div>
+          <p style={{ 
+            fontSize: '18px', 
+            textAlign: 'center', 
+            margin: 0,
+            color: '#b0b8c1',
+            fontWeight: '500'
+          }}>
+            戦術的定点を共有して、チームの勝利に貢献しよう
+          </p>
         
         {/* ユーザー情報と認証ボタン */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
           {currentUser ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-              <p style={{ margin: 0 }}>ようこそ、{currentUser.username}さん！</p>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '12px', 
+              alignItems: 'center',
+              padding: '20px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 70, 85, 0.3)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <p style={{ 
+                margin: 0, 
+                fontSize: '18px', 
+                color: '#00d4ff',
+                fontWeight: '600'
+              }}>
+                ようこそ、{currentUser.username}さん！
+              </p>
               <button
                 onClick={handleLogout}
                 style={{
-                  backgroundColor: '#e53e3e',
-                  color: 'white',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  border: 'none',
-                  cursor: 'pointer'
+                  backgroundColor: 'rgba(255, 70, 85, 0.1)',
+                  color: '#ff4655',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: '1px solid #ff4655',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease',
+                  backdropFilter: 'blur(5px)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#ff4655'
+                  e.target.style.color = 'white'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(255, 70, 85, 0.1)'
+                  e.target.style.color = '#ff4655'
                 }}
               >
                 ログアウト
@@ -567,12 +626,23 @@ function App() {
               <button
                 onClick={() => setShowAuth(showAuth === 'login' ? 'none' : 'login')}
                 style={{
-                  backgroundColor: '#3182ce',
-                  color: 'white',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  border: 'none',
-                  cursor: 'pointer'
+                  backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                  color: '#00d4ff',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: '1px solid #00d4ff',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease',
+                  backdropFilter: 'blur(5px)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#00d4ff'
+                  e.target.style.color = 'white'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
+                  e.target.style.color = '#00d4ff'
                 }}
               >
                 ログイン
@@ -580,12 +650,23 @@ function App() {
               <button
                 onClick={() => setShowAuth(showAuth === 'register' ? 'none' : 'register')}
                 style={{
-                  backgroundColor: '#38a169',
-                  color: 'white',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  border: 'none',
-                  cursor: 'pointer'
+                  backgroundColor: 'rgba(255, 70, 85, 0.1)',
+                  color: '#ff4655',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: '1px solid #ff4655',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease',
+                  backdropFilter: 'blur(5px)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#ff4655'
+                  e.target.style.color = 'white'
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'rgba(255, 70, 85, 0.1)'
+                  e.target.style.color = '#ff4655'
                 }}
               >
                 新規登録
@@ -594,92 +675,185 @@ function App() {
           )}
         </div>
         
-        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button 
             onClick={checkBackendConnection}
             disabled={isLoading}
             style={{
-              backgroundColor: '#3182ce',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              border: 'none',
+              backgroundColor: 'rgba(0, 212, 255, 0.1)',
+              color: '#00d4ff',
+              padding: '14px 20px',
+              borderRadius: '10px',
+              border: '1px solid #00d4ff',
               cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.6 : 1
+              opacity: isLoading ? 0.6 : 1,
+              fontWeight: '600',
+              fontSize: '14px',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(5px)',
+              boxShadow: '0 4px 15px rgba(0, 212, 255, 0.2)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = '#00d4ff'
+                e.target.style.color = 'white'
+                e.target.style.transform = 'translateY(-2px)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
+                e.target.style.color = '#00d4ff'
+                e.target.style.transform = 'translateY(0)'
+              }
             }}
           >
-            {isLoading ? '接続中...' : 'バックエンド接続テスト'}
+            {isLoading ? '接続中...' : '🔗 接続テスト'}
           </button>
           <button 
             onClick={fetchAgents}
             disabled={isLoading}
             style={{
-              backgroundColor: '#805ad5',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              border: 'none',
+              backgroundColor: 'rgba(128, 90, 213, 0.1)',
+              color: '#805ad5',
+              padding: '14px 20px',
+              borderRadius: '10px',
+              border: '1px solid #805ad5',
               cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.6 : 1
+              opacity: isLoading ? 0.6 : 1,
+              fontWeight: '600',
+              fontSize: '14px',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(5px)',
+              boxShadow: '0 4px 15px rgba(128, 90, 213, 0.2)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = '#805ad5'
+                e.target.style.color = 'white'
+                e.target.style.transform = 'translateY(-2px)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = 'rgba(128, 90, 213, 0.1)'
+                e.target.style.color = '#805ad5'
+                e.target.style.transform = 'translateY(0)'
+              }
             }}
           >
-            {isLoading ? '取得中...' : 'エージェント一覧'}
+            {isLoading ? '取得中...' : '🎯 エージェント'}
           </button>
           <button 
             onClick={fetchMaps}
             disabled={isLoading}
             style={{
-              backgroundColor: '#38a169',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              border: 'none',
+              backgroundColor: 'rgba(56, 161, 105, 0.1)',
+              color: '#38a169',
+              padding: '14px 20px',
+              borderRadius: '10px',
+              border: '1px solid #38a169',
               cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.6 : 1
+              opacity: isLoading ? 0.6 : 1,
+              fontWeight: '600',
+              fontSize: '14px',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(5px)',
+              boxShadow: '0 4px 15px rgba(56, 161, 105, 0.2)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = '#38a169'
+                e.target.style.color = 'white'
+                e.target.style.transform = 'translateY(-2px)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = 'rgba(56, 161, 105, 0.1)'
+                e.target.style.color = '#38a169'
+                e.target.style.transform = 'translateY(0)'
+              }
             }}
           >
-            {isLoading ? '取得中...' : 'マップ一覧'}
+            {isLoading ? '取得中...' : '🗺️ マップ'}
           </button>
           <button 
             onClick={fetchFixedPoints}
             disabled={isLoading}
             style={{
-              backgroundColor: '#e53e3e',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              border: 'none',
+              backgroundColor: 'rgba(255, 70, 85, 0.1)',
+              color: '#ff4655',
+              padding: '14px 20px',
+              borderRadius: '10px',
+              border: '1px solid #ff4655',
               cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.6 : 1
+              opacity: isLoading ? 0.6 : 1,
+              fontWeight: '600',
+              fontSize: '14px',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(5px)',
+              boxShadow: '0 4px 15px rgba(255, 70, 85, 0.2)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = '#ff4655'
+                e.target.style.color = 'white'
+                e.target.style.transform = 'translateY(-2px)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading) {
+                e.target.style.backgroundColor = 'rgba(255, 70, 85, 0.1)'
+                e.target.style.color = '#ff4655'
+                e.target.style.transform = 'translateY(0)'
+              }
             }}
           >
-            {isLoading ? '取得中...' : '定点一覧'}
+            {isLoading ? '取得中...' : '📋 定点一覧'}
           </button>
           {currentUser && (
             <button 
               onClick={() => setShowData('create-fixed-point')}
               style={{
-                backgroundColor: '#9f7aea',
-                color: 'white',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                border: 'none',
-                cursor: 'pointer'
+                backgroundColor: 'rgba(159, 122, 234, 0.1)',
+                color: '#9f7aea',
+                padding: '14px 20px',
+                borderRadius: '10px',
+                border: '1px solid #9f7aea',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '14px',
+                transition: 'all 0.3s ease',
+                backdropFilter: 'blur(5px)',
+                boxShadow: '0 4px 15px rgba(159, 122, 234, 0.2)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#9f7aea'
+                e.target.style.color = 'white'
+                e.target.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'rgba(159, 122, 234, 0.1)'
+                e.target.style.color = '#9f7aea'
+                e.target.style.transform = 'translateY(0)'
               }}
             >
-              定点を投稿
+              ✨ 定点を投稿
             </button>
           )}
         </div>
         {apiStatus && (
           <div style={{
             padding: '16px',
-            borderRadius: '8px',
-            backgroundColor: apiStatus.isError ? '#fed7d7' : '#c6f6d5',
-            border: `1px solid ${apiStatus.isError ? '#fc8181' : '#68d391'}`,
-            color: apiStatus.isError ? '#c53030' : '#276749',
+            borderRadius: '12px',
+            backgroundColor: apiStatus.isError ? 'rgba(255, 70, 85, 0.1)' : 'rgba(0, 212, 255, 0.1)',
+            border: `1px solid ${apiStatus.isError ? '#ff4655' : '#00d4ff'}`,
+            color: apiStatus.isError ? '#ff4655' : '#00d4ff',
             textAlign: 'center',
-            fontWeight: 500
+            fontWeight: 600,
+            backdropFilter: 'blur(10px)',
+            boxShadow: `0 4px 15px ${apiStatus.isError ? 'rgba(255, 70, 85, 0.2)' : 'rgba(0, 212, 255, 0.2)'}`
           }}>
             {apiStatus.message}
           </div>
