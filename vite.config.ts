@@ -13,4 +13,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  server: {
+    watch: {
+      usePolling: true,  // WSL環境でファイル変更を検知するために必要
+      interval: 100      // ポーリング間隔（ミリ秒）
+    }
+  }
 })
