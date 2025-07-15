@@ -1551,7 +1551,12 @@ function App() {
                   gap: '16px',
                   maxHeight: '400px',
                   overflowY: 'auto',
-                  padding: '8px'
+                  padding: '8px',
+                  // スクロールパフォーマンス改善
+                  willChange: 'scroll-position',
+                  transform: 'translateZ(0)', // GPU アクセラレーション
+                  backfaceVisibility: 'hidden',
+                  WebkitOverflowScrolling: 'touch' // iOS Safari でのスムーズスクロール
                 }}>
                   {agents.map(agent => (
                     <div
@@ -1564,8 +1569,10 @@ function App() {
                         overflow: 'hidden',
                         border: selectedAgent === agent.uuid ? '3px solid #ff4655' : '2px solid rgba(255, 255, 255, 0.2)',
                         background: 'rgba(255, 255, 255, 0.1)',
-                        transition: 'all 0.3s ease',
-                        transform: selectedAgent === agent.uuid ? 'scale(1.05)' : 'scale(1)',
+                        transition: 'border-color 0.2s ease, transform 0.2s ease',  // 軽量化
+                        // GPU アクセラレーション
+                        backfaceVisibility: 'hidden',
+                        transform: selectedAgent === agent.uuid ? 'scale(1.05) translateZ(0)' : 'scale(1) translateZ(0)',
                         boxShadow: selectedAgent === agent.uuid ? '0 0 20px rgba(255, 70, 85, 0.5)' : '0 4px 15px rgba(0, 0, 0, 0.2)'
                       }}
                       onMouseEnter={(e) => {
@@ -1584,11 +1591,15 @@ function App() {
                       <img
                         src={processImageUrl(agent.displayIcon)}
                         alt={agent.displayName}
+                        loading="lazy"  // 遅延読み込み
                         style={{
                           width: '100%',
                           height: '80px',
                           objectFit: 'cover',
-                          display: 'block'
+                          display: 'block',
+                          // 画像の GPU アクセラレーション
+                          transform: 'translateZ(0)',
+                          backfaceVisibility: 'hidden'
                         }}
                       />
                       <div style={{
@@ -1648,7 +1659,12 @@ function App() {
                   gap: '16px',
                   maxHeight: '500px',
                   overflowY: 'auto',
-                  padding: '8px'
+                  padding: '8px',
+                  // スクロールパフォーマンス改善
+                  willChange: 'scroll-position',
+                  transform: 'translateZ(0)', // GPU アクセラレーション
+                  backfaceVisibility: 'hidden',
+                  WebkitOverflowScrolling: 'touch' // iOS Safari でのスムーズスクロール
                 }}>
                   {maps.map(map => (
                     <div
@@ -1661,8 +1677,10 @@ function App() {
                         overflow: 'hidden',
                         border: selectedMap === map.uuid ? '3px solid #00d4ff' : '2px solid rgba(255, 255, 255, 0.2)',
                         background: 'rgba(255, 255, 255, 0.1)',
-                        transition: 'all 0.3s ease',
-                        transform: selectedMap === map.uuid ? 'scale(1.05)' : 'scale(1)',
+                        transition: 'border-color 0.2s ease, transform 0.2s ease',  // 軽量化
+                        // GPU アクセラレーション
+                        backfaceVisibility: 'hidden',
+                        transform: selectedMap === map.uuid ? 'scale(1.05) translateZ(0)' : 'scale(1) translateZ(0)',
                         boxShadow: selectedMap === map.uuid ? '0 0 20px rgba(0, 212, 255, 0.5)' : '0 4px 15px rgba(0, 0, 0, 0.2)'
                       }}
                       onMouseEnter={(e) => {
@@ -1681,11 +1699,15 @@ function App() {
                       <img
                         src={processImageUrl(map.splash)}
                         alt={map.displayName}
+                        loading="lazy"  // 遅延読み込み
                         style={{
                           width: '100%',
                           height: '100px',
                           objectFit: 'cover',
-                          display: 'block'
+                          display: 'block',
+                          // 画像の GPU アクセラレーション
+                          transform: 'translateZ(0)',
+                          backfaceVisibility: 'hidden'
                         }}
                       />
                       <div style={{
