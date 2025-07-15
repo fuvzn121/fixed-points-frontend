@@ -55,8 +55,8 @@ interface FixedPoint {
   character_id: string
   map_id: string
   created_at: string
-  updated_at: string
-  steps: FixedPointStep[]
+  updated_at?: string
+  steps?: FixedPointStep[]
   favorites_count: number
   is_favorited: boolean
   username: string
@@ -288,6 +288,7 @@ function App() {
         })
       }
     } catch (error) {
+      console.error('Error fetching fixed points:', error)
       setApiStatus({
         message: '定点取得エラー',
         isError: true
@@ -353,7 +354,8 @@ function App() {
     }
 
     setIsLoading(true)
-    const formData = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const formData = new FormData(form)
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
     
     // ステップデータを収集
@@ -432,15 +434,18 @@ function App() {
         })
       })
 
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
+
       if (response.ok) {
         setApiStatus({
           message: '定点を投稿しました！',
           isError: false
         })
         // フォームをリセット
-        e.currentTarget.reset()
+        form.reset()
         // 定点一覧を再取得
-        fetchFixedPoints()
+        await fetchFixedPoints()
         setShowData('fixed-points')
       } else {
         const data = await response.json()
@@ -450,6 +455,7 @@ function App() {
         })
       }
     } catch (error) {
+      console.error('Error during fixed point creation:', error)
       setApiStatus({
         message: '定点投稿エラー',
         isError: true
@@ -951,9 +957,11 @@ function App() {
                           <p style={{ margin: '4px 0' }}>
                             投稿日: {new Date(fixedPoint.created_at).toLocaleDateString('ja-JP')}
                           </p>
-                          <p style={{ margin: '4px 0' }}>
-                            ステップ数: {fixedPoint.steps.length}
-                          </p>
+                          {fixedPoint.steps && (
+                            <p style={{ margin: '4px 0' }}>
+                              ステップ数: {fixedPoint.steps.length}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
