@@ -2051,13 +2051,12 @@ function App() {
                   right: 0,
                   bottom: 0,
                   background: 'rgba(0, 0, 0, 0.9)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   zIndex: 1000,
                   padding: '20px',
                   overflowY: 'auto', // スクロール可能にする
-                  backdropFilter: 'blur(10px)'
+                  backdropFilter: 'blur(10px)',
+                  // flexを使わずに手動でセンタリング
+                  display: 'block'
                 }}
                 onClick={(e) => {
                   // モーダル背景をクリックしたときに閉じる
@@ -2073,14 +2072,16 @@ function App() {
                   maxHeight: '90vh', // 高さ制限を追加
                   display: 'flex',
                   flexDirection: 'column',
-                  margin: 'auto' // 垂直方向も中央揃え
+                  margin: '0 auto', // 水平方向のみ中央揃え
+                  marginTop: '5vh', // 上部に少し余白
+                  marginBottom: '5vh' // 下部に少し余白
                 }}>
                   {/* Close button */}
                   <button
                     onClick={() => setShowMapModal(false)}
                     style={{
                       position: 'absolute',
-                      top: '-50px',
+                      top: '-60px',
                       right: '0',
                       background: 'rgba(255, 70, 85, 0.2)',
                       border: '2px solid #ff4655',
