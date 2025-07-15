@@ -1,15 +1,6 @@
-import { useState } from 'react'
-
-interface LoginForm {
-  email: string
-  password: string
-}
-
-interface RegisterForm {
-  username: string
-  email: string
-  password: string
-}
+import { useState, useEffect } from 'react'
+import InteractiveMap from './InteractiveMap'
+import MapDisplay from './MapDisplay'
 
 interface User {
   id: number
@@ -45,6 +36,10 @@ interface FixedPointStep {
   step_order: number
   image_url?: string
   description?: string
+  position_x?: number
+  position_y?: number
+  skill_position_x?: number
+  skill_position_y?: number
   created_at: string
 }
 
@@ -63,6 +58,27 @@ interface FixedPoint {
 }
 
 function App() {
+  // プレースホルダーのグローバルスタイルを適用
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.innerHTML = `
+      input::placeholder,
+      textarea::placeholder {
+        color: rgba(255, 255, 255, 0.6) !important;
+        opacity: 1 !important;
+      }
+      input:focus::placeholder,
+      textarea:focus::placeholder {
+        color: rgba(255, 255, 255, 0.4) !important;
+      }
+    `
+    document.head.appendChild(style)
+    
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
+
   const [isLoading, setIsLoading] = useState(false)
   const [apiStatus, setApiStatus] = useState<{ message: string; isError: boolean } | null>(null)
   const [agents, setAgents] = useState<Agent[]>([])
@@ -73,27 +89,58 @@ function App() {
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('access_token'))
   const [fixedPoints, setFixedPoints] = useState<FixedPoint[]>([])
   const [selectedFixedPoint, setSelectedFixedPoint] = useState<FixedPoint | null>(null)
+  const [selectedAgent, setSelectedAgent] = useState<string>('')
+  const [selectedMap, setSelectedMap] = useState<string>('')
+  const [stepPreviews, setStepPreviews] = useState<{ [key: number]: string }>({})
+  const [dragActive, setDragActive] = useState<{ [key: number]: boolean }>({})
+  // マップ座標情報（定点全体で1つ）
+  const [startPosition, setStartPosition] = useState<{ x: number; y: number } | null>(null)
+  const [skillPosition, setSkillPosition] = useState<{ x: number; y: number } | null>(null)
+  const [showMapModal, setShowMapModal] = useState(false)
+  const [mapMode, setMapMode] = useState<'start' | 'skill'>('start')
 
-  const checkBackendConnection = async () => {
-    setIsLoading(true)
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${apiUrl}/health`)
-      const data = await response.json()
-      
-      if (response.ok) {
-        setApiStatus({
-          message: `バックエンド接続成功！ ステータス: ${data.status}`,
-          isError: false
-        })
+  // ファイルハンドリング関数
+  const handleFileChange = (stepNumber: number, file: File | null) => {
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setStepPreviews(prev => ({ ...prev, [stepNumber]: reader.result as string }))
       }
-    } catch (error) {
-      setApiStatus({
-        message: 'バックエンド接続エラー: サーバーが起動していることを確認してください',
-        isError: true
+      reader.readAsDataURL(file)
+    } else if (!file) {
+      setStepPreviews(prev => {
+        const newPreviews = { ...prev }
+        delete newPreviews[stepNumber]
+        return newPreviews
       })
-    } finally {
-      setIsLoading(false)
+    }
+  }
+
+  const handleDrag = (e: React.DragEvent, stepNumber: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(prev => ({ ...prev, [stepNumber]: true }))
+    } else if (e.type === "dragleave") {
+      setDragActive(prev => ({ ...prev, [stepNumber]: false }))
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent, stepNumber: number) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(prev => ({ ...prev, [stepNumber]: false }))
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0]
+      handleFileChange(stepNumber, file)
+      // inputタグにもファイルをセット
+      const input = document.getElementById(`step${stepNumber}_image`) as HTMLInputElement
+      if (input) {
+        const dataTransfer = new DataTransfer()
+        dataTransfer.items.add(file)
+        input.files = dataTransfer.files
+      }
     }
   }
 
@@ -108,13 +155,13 @@ function App() {
       if (response.ok) {
         setAgents(data)
         setApiStatus({
-          message: `${data.length}人のエージェントを取得しました！`,
+          message: `Successfully loaded ${data.length} agents!`,
           isError: false
         })
       }
     } catch (error) {
       setApiStatus({
-        message: 'エージェント取得エラー',
+        message: 'Failed to load agents',
         isError: true
       })
     } finally {
@@ -133,13 +180,13 @@ function App() {
       if (response.ok) {
         setMaps(data)
         setApiStatus({
-          message: `${data.length}個のマップを取得しました！`,
+          message: `Successfully loaded ${data.length} maps!`,
           isError: false
         })
       }
     } catch (error) {
       setApiStatus({
-        message: 'マップ取得エラー',
+        message: 'Failed to load maps',
         isError: true
       })
     } finally {
@@ -170,19 +217,19 @@ function App() {
         setAccessToken(data.access_token)
         setShowAuth('none')
         setApiStatus({
-          message: 'ログインに成功しました！',
+          message: 'Successfully logged in!',
           isError: false
         })
         fetchCurrentUser(data.access_token)
       } else {
         setApiStatus({
-          message: 'ログインに失敗しました。メールアドレスまたはパスワードが正しくありません。',
+          message: 'Login failed. Please check your email and password.',
           isError: true
         })
       }
     } catch (error) {
       setApiStatus({
-        message: 'ログインエラー',
+        message: 'Login error',
         isError: true
       })
     } finally {
@@ -210,19 +257,19 @@ function App() {
       if (response.ok) {
         setShowAuth('login')
         setApiStatus({
-          message: 'ユーザー登録に成功しました！ログインしてください。',
+          message: 'Account created successfully! Please log in.',
           isError: false
         })
       } else {
         const data = await response.json()
         setApiStatus({
-          message: data.detail || 'ユーザー登録に失敗しました',
+          message: data.detail || 'Account creation failed',
           isError: true
         })
       }
     } catch (error) {
       setApiStatus({
-        message: 'ユーザー登録エラー',
+        message: 'Registration error',
         isError: true
       })
     } finally {
@@ -257,7 +304,7 @@ function App() {
     setAccessToken(null)
     setCurrentUser(null)
     setApiStatus({
-      message: 'ログアウトしました',
+      message: 'Successfully logged out',
       isError: false
     })
   }
@@ -278,19 +325,19 @@ function App() {
       if (response.ok) {
         setFixedPoints(data)
         setApiStatus({
-          message: `${data.length}件の定点を取得しました！`,
+          message: `Successfully loaded ${data.length} fixed points!`,
           isError: false
         })
       } else {
         setApiStatus({
-          message: '定点の取得に失敗しました',
+          message: 'Failed to load fixed points',
           isError: true
         })
       }
     } catch (error) {
       console.error('Error fetching fixed points:', error)
       setApiStatus({
-        message: '定点取得エラー',
+        message: 'Fixed points loading error',
         isError: true
       })
     } finally {
@@ -301,7 +348,7 @@ function App() {
   const toggleFavorite = async (fixedPointId: number, isFavorited: boolean) => {
     if (!accessToken) {
       setApiStatus({
-        message: 'お気に入りにはログインが必要です',
+        message: 'Login required for favorites',
         isError: true
       })
       return
@@ -331,13 +378,13 @@ function App() {
           )
         )
         setApiStatus({
-          message: isFavorited ? 'お気に入りから削除しました' : 'お気に入りに追加しました',
+          message: isFavorited ? 'Removed from favorites' : 'Added to favorites',
           isError: false
         })
       }
     } catch (error) {
       setApiStatus({
-        message: 'お気に入り操作エラー',
+        message: 'Favorite operation error',
         isError: true
       })
     }
@@ -360,14 +407,14 @@ function App() {
         setShowData('none')
       } else {
         setApiStatus({
-          message: '定点の詳細取得に失敗しました',
+          message: 'Failed to load fixed point details',
           isError: true
         })
       }
     } catch (error) {
       console.error('Error fetching fixed point detail:', error)
       setApiStatus({
-        message: '定点詳細取得エラー',
+        message: 'Fixed point details loading error',
         isError: true
       })
     } finally {
@@ -379,7 +426,7 @@ function App() {
     e.preventDefault()
     if (!accessToken) {
       setApiStatus({
-        message: '定点の投稿にはログインが必要です',
+        message: 'Login required to post fixed points',
         isError: true
       })
       return
@@ -389,6 +436,25 @@ function App() {
     const form = e.currentTarget
     const formData = new FormData(form)
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    
+    // バリデーション
+    if (!selectedAgent) {
+      setApiStatus({
+        message: 'Please select an agent',
+        isError: true
+      })
+      setIsLoading(false)
+      return
+    }
+    
+    if (!selectedMap) {
+      setApiStatus({
+        message: 'Please select a map',
+        isError: true
+      })
+      setIsLoading(false)
+      return
+    }
     
     // ステップデータを収集
     const steps = []
@@ -418,7 +484,7 @@ function App() {
               imageUrl = uploadData.url
             } else {
               setApiStatus({
-                message: `ステップ${i}の画像アップロードに失敗しました`,
+                message: `Failed to upload image for step ${i}`,
                 isError: true
               })
               setIsLoading(false)
@@ -426,7 +492,7 @@ function App() {
             }
           } catch (error) {
             setApiStatus({
-              message: '画像アップロードエラー',
+              message: 'Image upload error',
               isError: true
             })
             setIsLoading(false)
@@ -434,23 +500,48 @@ function App() {
           }
         }
         
-        steps.push({
+        const stepData = {
           step_order: i,
           description: description || '',
-          image_url: imageUrl
-        })
+          image_url: imageUrl,
+          // 最初のステップに座標情報を追加
+          ...(i === 1 && startPosition ? {
+            position_x: startPosition.x,
+            position_y: startPosition.y
+          } : {}),
+          ...(i === 1 && skillPosition ? {
+            skill_position_x: skillPosition.x,
+            skill_position_y: skillPosition.y
+          } : {})
+        }
+        
+        if (i === 1) {
+          console.log('Step 1 data with positions:', stepData)
+          console.log('Start position:', startPosition)
+          console.log('Skill position:', skillPosition)
+        }
+        
+        steps.push(stepData)
       }
     }
 
     if (steps.length === 0) {
       setApiStatus({
-        message: '少なくとも1つのステップを入力してください',
+        message: 'Please provide at least one step',
         isError: true
       })
       setIsLoading(false)
       return
     }
 
+    const requestData = {
+      title: formData.get('title'),
+      character_id: selectedAgent,
+      map_id: selectedMap,
+      steps: steps
+    }
+    console.log('Sending fixed point data:', requestData)
+    
     try {
       const response = await fetch(`${apiUrl}/api/fixed-points/`, {
         method: 'POST',
@@ -458,12 +549,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
-        body: JSON.stringify({
-          title: formData.get('title'),
-          character_id: formData.get('character_id'),
-          map_id: formData.get('map_id'),
-          steps: steps
-        })
+        body: JSON.stringify(requestData)
       })
 
       console.log('Response status:', response.status)
@@ -471,25 +557,30 @@ function App() {
 
       if (response.ok) {
         setApiStatus({
-          message: '定点を投稿しました！',
+          message: 'Fixed point posted successfully!',
           isError: false
         })
         // フォームをリセット
         form.reset()
-        // 定点一覧を再取得
+        setSelectedAgent('')
+        setSelectedMap('')
+        setStepPreviews({})
+        setStartPosition(null)
+        setSkillPosition(null)
+        // Reload fixed points list
         await fetchFixedPoints()
         setShowData('fixed-points')
       } else {
         const data = await response.json()
         setApiStatus({
-          message: data.detail || '定点の投稿に失敗しました',
+          message: data.detail || 'Failed to post fixed point',
           isError: true
         })
       }
     } catch (error) {
       console.error('Error during fixed point creation:', error)
       setApiStatus({
-        message: '定点投稿エラー',
+        message: 'Fixed point posting error',
         isError: true
       })
     } finally {
@@ -539,7 +630,12 @@ function App() {
       background: 'linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #0f1419 100%)',
       color: '#ffffff'
     }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
+      <div style={{ 
+        maxWidth: '1920px', 
+        margin: '0 auto', 
+        padding: '40px 20px',
+        width: '100%'
+      }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           <div style={{ textAlign: 'center', marginBottom: '20px' }}>
             <h1 style={{ 
@@ -610,15 +706,17 @@ function App() {
                   backdropFilter: 'blur(5px)'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#ff4655'
-                  e.target.style.color = 'white'
+                  const target = e.target as HTMLButtonElement
+                  target.style.backgroundColor = '#ff4655'
+                  target.style.color = 'white'
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'rgba(255, 70, 85, 0.1)'
-                  e.target.style.color = '#ff4655'
+                  const target = e.target as HTMLButtonElement
+                  target.style.backgroundColor = 'rgba(255, 70, 85, 0.1)'
+                  target.style.color = '#ff4655'
                 }}
               >
-                ログアウト
+                Logout
               </button>
             </div>
           ) : (
@@ -637,15 +735,17 @@ function App() {
                   backdropFilter: 'blur(5px)'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#00d4ff'
-                  e.target.style.color = 'white'
+                  const target = e.target as HTMLButtonElement
+                  target.style.backgroundColor = '#00d4ff'
+                  target.style.color = 'white'
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
-                  e.target.style.color = '#00d4ff'
+                  const target = e.target as HTMLButtonElement
+                  target.style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
+                  target.style.color = '#00d4ff'
                 }}
               >
-                ログイン
+                Login
               </button>
               <button
                 onClick={() => setShowAuth(showAuth === 'register' ? 'none' : 'register')}
@@ -661,88 +761,65 @@ function App() {
                   backdropFilter: 'blur(5px)'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#ff4655'
-                  e.target.style.color = 'white'
+                  const target = e.target as HTMLButtonElement
+                  target.style.backgroundColor = '#ff4655'
+                  target.style.color = 'white'
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = 'rgba(255, 70, 85, 0.1)'
-                  e.target.style.color = '#ff4655'
+                  const target = e.target as HTMLButtonElement
+                  target.style.backgroundColor = 'rgba(255, 70, 85, 0.1)'
+                  target.style.color = '#ff4655'
                 }}
               >
-                新規登録
+                Sign Up
               </button>
             </div>
           )}
         </div>
         
-        <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button 
-            onClick={checkBackendConnection}
-            disabled={isLoading}
-            style={{
-              backgroundColor: 'rgba(0, 212, 255, 0.1)',
-              color: '#00d4ff',
-              padding: '14px 20px',
-              borderRadius: '10px',
-              border: '1px solid #00d4ff',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.6 : 1,
-              fontWeight: '600',
-              fontSize: '14px',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(5px)',
-              boxShadow: '0 4px 15px rgba(0, 212, 255, 0.2)'
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading) {
-                e.target.style.backgroundColor = '#00d4ff'
-                e.target.style.color = 'white'
-                e.target.style.transform = 'translateY(-2px)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isLoading) {
-                e.target.style.backgroundColor = 'rgba(0, 212, 255, 0.1)'
-                e.target.style.color = '#00d4ff'
-                e.target.style.transform = 'translateY(0)'
-              }
-            }}
-          >
-            {isLoading ? '接続中...' : '🔗 接続テスト'}
-          </button>
+        <div style={{ 
+          display: 'flex', 
+          gap: '20px', 
+          justifyContent: 'center', 
+          flexWrap: 'wrap',
+          marginBottom: '24px' 
+        }}>
           <button 
             onClick={fetchAgents}
             disabled={isLoading}
             style={{
               backgroundColor: 'rgba(128, 90, 213, 0.1)',
               color: '#805ad5',
-              padding: '14px 20px',
+              padding: '16px 32px',
+              minWidth: '180px',
               borderRadius: '10px',
               border: '1px solid #805ad5',
               cursor: isLoading ? 'not-allowed' : 'pointer',
               opacity: isLoading ? 0.6 : 1,
               fontWeight: '600',
-              fontSize: '14px',
+              fontSize: '16px',
               transition: 'all 0.3s ease',
               backdropFilter: 'blur(5px)',
               boxShadow: '0 4px 15px rgba(128, 90, 213, 0.2)'
             }}
             onMouseEnter={(e) => {
               if (!isLoading) {
-                e.target.style.backgroundColor = '#805ad5'
-                e.target.style.color = 'white'
-                e.target.style.transform = 'translateY(-2px)'
+                const target = e.target as HTMLButtonElement
+                target.style.backgroundColor = '#805ad5'
+                target.style.color = 'white'
+                target.style.transform = 'translateY(-2px)'
               }
             }}
             onMouseLeave={(e) => {
               if (!isLoading) {
-                e.target.style.backgroundColor = 'rgba(128, 90, 213, 0.1)'
-                e.target.style.color = '#805ad5'
-                e.target.style.transform = 'translateY(0)'
+                const target = e.target as HTMLButtonElement
+                target.style.backgroundColor = 'rgba(128, 90, 213, 0.1)'
+                target.style.color = '#805ad5'
+                target.style.transform = 'translateY(0)'
               }
             }}
           >
-            {isLoading ? '取得中...' : '🎯 エージェント'}
+            {isLoading ? 'Loading...' : '🎯 Agents'}
           </button>
           <button 
             onClick={fetchMaps}
@@ -750,33 +827,36 @@ function App() {
             style={{
               backgroundColor: 'rgba(56, 161, 105, 0.1)',
               color: '#38a169',
-              padding: '14px 20px',
+              padding: '16px 32px',
+              minWidth: '180px',
               borderRadius: '10px',
               border: '1px solid #38a169',
               cursor: isLoading ? 'not-allowed' : 'pointer',
               opacity: isLoading ? 0.6 : 1,
               fontWeight: '600',
-              fontSize: '14px',
+              fontSize: '16px',
               transition: 'all 0.3s ease',
               backdropFilter: 'blur(5px)',
               boxShadow: '0 4px 15px rgba(56, 161, 105, 0.2)'
             }}
             onMouseEnter={(e) => {
               if (!isLoading) {
-                e.target.style.backgroundColor = '#38a169'
-                e.target.style.color = 'white'
-                e.target.style.transform = 'translateY(-2px)'
+                const target = e.target as HTMLButtonElement
+                target.style.backgroundColor = '#38a169'
+                target.style.color = 'white'
+                target.style.transform = 'translateY(-2px)'
               }
             }}
             onMouseLeave={(e) => {
               if (!isLoading) {
-                e.target.style.backgroundColor = 'rgba(56, 161, 105, 0.1)'
-                e.target.style.color = '#38a169'
-                e.target.style.transform = 'translateY(0)'
+                const target = e.target as HTMLButtonElement
+                target.style.backgroundColor = 'rgba(56, 161, 105, 0.1)'
+                target.style.color = '#38a169'
+                target.style.transform = 'translateY(0)'
               }
             }}
           >
-            {isLoading ? '取得中...' : '🗺️ マップ'}
+            {isLoading ? 'Loading...' : '🗺️ Maps'}
           </button>
           <button 
             onClick={fetchFixedPoints}
@@ -784,33 +864,36 @@ function App() {
             style={{
               backgroundColor: 'rgba(255, 70, 85, 0.1)',
               color: '#ff4655',
-              padding: '14px 20px',
+              padding: '16px 32px',
+              minWidth: '180px',
               borderRadius: '10px',
               border: '1px solid #ff4655',
               cursor: isLoading ? 'not-allowed' : 'pointer',
               opacity: isLoading ? 0.6 : 1,
               fontWeight: '600',
-              fontSize: '14px',
+              fontSize: '16px',
               transition: 'all 0.3s ease',
               backdropFilter: 'blur(5px)',
               boxShadow: '0 4px 15px rgba(255, 70, 85, 0.2)'
             }}
             onMouseEnter={(e) => {
               if (!isLoading) {
-                e.target.style.backgroundColor = '#ff4655'
-                e.target.style.color = 'white'
-                e.target.style.transform = 'translateY(-2px)'
+                const target = e.target as HTMLButtonElement
+                target.style.backgroundColor = '#ff4655'
+                target.style.color = 'white'
+                target.style.transform = 'translateY(-2px)'
               }
             }}
             onMouseLeave={(e) => {
               if (!isLoading) {
-                e.target.style.backgroundColor = 'rgba(255, 70, 85, 0.1)'
-                e.target.style.color = '#ff4655'
-                e.target.style.transform = 'translateY(0)'
+                const target = e.target as HTMLButtonElement
+                target.style.backgroundColor = 'rgba(255, 70, 85, 0.1)'
+                target.style.color = '#ff4655'
+                target.style.transform = 'translateY(0)'
               }
             }}
           >
-            {isLoading ? '取得中...' : '📋 定点一覧'}
+            {isLoading ? 'Loading...' : '📋 Fixed Points'}
           </button>
           {currentUser && (
             <button 
@@ -818,28 +901,31 @@ function App() {
               style={{
                 backgroundColor: 'rgba(159, 122, 234, 0.1)',
                 color: '#9f7aea',
-                padding: '14px 20px',
+                padding: '16px 32px',
+              minWidth: '180px',
                 borderRadius: '10px',
                 border: '1px solid #9f7aea',
                 cursor: 'pointer',
                 fontWeight: '600',
-                fontSize: '14px',
+                fontSize: '16px',
                 transition: 'all 0.3s ease',
                 backdropFilter: 'blur(5px)',
                 boxShadow: '0 4px 15px rgba(159, 122, 234, 0.2)'
               }}
               onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#9f7aea'
-                e.target.style.color = 'white'
-                e.target.style.transform = 'translateY(-2px)'
+                const target = e.target as HTMLButtonElement
+                target.style.backgroundColor = '#9f7aea'
+                target.style.color = 'white'
+                target.style.transform = 'translateY(-2px)'
               }}
               onMouseLeave={(e) => {
-                e.target.style.backgroundColor = 'rgba(159, 122, 234, 0.1)'
-                e.target.style.color = '#9f7aea'
-                e.target.style.transform = 'translateY(0)'
+                const target = e.target as HTMLButtonElement
+                target.style.backgroundColor = 'rgba(159, 122, 234, 0.1)'
+                target.style.color = '#9f7aea'
+                target.style.transform = 'translateY(0)'
               }}
             >
-              ✨ 定点を投稿
+              ✨ New Fixed Point
             </button>
           )}
         </div>
@@ -862,17 +948,17 @@ function App() {
         {/* ログインフォーム */}
         {showAuth === 'login' && (
           <div style={{
-            maxWidth: '400px',
+            maxWidth: '800px',
             margin: '0 auto',
-            padding: '24px',
+            padding: '48px',
             border: '1px solid #e2e8f0',
             borderRadius: '8px',
             backgroundColor: 'white'
           }}>
-            <h2 style={{ fontSize: '24px', marginBottom: '16px', textAlign: 'center' }}>ログイン</h2>
+            <h2 style={{ fontSize: '24px', marginBottom: '16px', textAlign: 'center' }}>Login</h2>
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label htmlFor="email" style={{ display: 'block', marginBottom: '4px' }}>メールアドレス</label>
+                <label htmlFor="email" style={{ display: 'block', marginBottom: '4px' }}>Email</label>
                 <input
                   type="email"
                   id="email"
@@ -888,7 +974,7 @@ function App() {
                 />
               </div>
               <div>
-                <label htmlFor="password" style={{ display: 'block', marginBottom: '4px' }}>パスワード</label>
+                <label htmlFor="password" style={{ display: 'block', marginBottom: '4px' }}>Password</label>
                 <input
                   type="password"
                   id="password"
@@ -918,7 +1004,7 @@ function App() {
                   fontWeight: 'bold'
                 }}
               >
-                {isLoading ? 'ログイン中...' : 'ログイン'}
+                {isLoading ? 'Logging in...' : 'Login'}
               </button>
             </form>
           </div>
@@ -927,17 +1013,17 @@ function App() {
         {/* 新規登録フォーム */}
         {showAuth === 'register' && (
           <div style={{
-            maxWidth: '400px',
+            maxWidth: '800px',
             margin: '0 auto',
-            padding: '24px',
+            padding: '48px',
             border: '1px solid #e2e8f0',
             borderRadius: '8px',
             backgroundColor: 'white'
           }}>
-            <h2 style={{ fontSize: '24px', marginBottom: '16px', textAlign: 'center' }}>新規登録</h2>
+            <h2 style={{ fontSize: '24px', marginBottom: '16px', textAlign: 'center' }}>Sign Up</h2>
             <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label htmlFor="username" style={{ display: 'block', marginBottom: '4px' }}>ユーザー名</label>
+                <label htmlFor="username" style={{ display: 'block', marginBottom: '4px' }}>Username</label>
                 <input
                   type="text"
                   id="username"
@@ -955,7 +1041,7 @@ function App() {
                 />
               </div>
               <div>
-                <label htmlFor="email" style={{ display: 'block', marginBottom: '4px' }}>メールアドレス</label>
+                <label htmlFor="email" style={{ display: 'block', marginBottom: '4px' }}>Email</label>
                 <input
                   type="email"
                   id="email"
@@ -971,7 +1057,7 @@ function App() {
                 />
               </div>
               <div>
-                <label htmlFor="password" style={{ display: 'block', marginBottom: '4px' }}>パスワード（8文字以上）</label>
+                <label htmlFor="password" style={{ display: 'block', marginBottom: '4px' }}>Password (8+ characters)</label>
                 <input
                   type="password"
                   id="password"
@@ -1002,7 +1088,7 @@ function App() {
                   fontWeight: 'bold'
                 }}
               >
-                {isLoading ? '登録中...' : '登録'}
+                {isLoading ? 'Creating account...' : 'Sign Up'}
               </button>
             </form>
           </div>
@@ -1011,8 +1097,13 @@ function App() {
         {/* エージェント表示 */}
         {showData === 'agents' && agents.length > 0 && (
           <div>
-            <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>エージェント一覧</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+            <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>Agents</h2>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+              gap: '20px',
+              width: '100%' 
+            }}>
               {agents.map((agent) => (
                 <div
                   key={agent.uuid}
@@ -1053,8 +1144,13 @@ function App() {
         {/* マップ表示 */}
         {showData === 'maps' && maps.length > 0 && (
           <div>
-            <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>マップ一覧</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '16px' }}>
+            <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>Maps</h2>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
+              gap: '20px',
+              width: '100%' 
+            }}>
               {maps.map((map) => (
                 <div
                   key={map.uuid}
@@ -1086,16 +1182,55 @@ function App() {
           </div>
         )}
         
-        {/* 定点一覧表示 */}
+        {/* Fixed Points List Display */}
         {showData === 'fixed-points' && (
           <div>
-            <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>定点一覧</h2>
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '32px'
+            }}>
+              <h2 style={{ 
+                fontSize: '48px', 
+                margin: '0 0 8px 0',
+                background: 'linear-gradient(45deg, #ff4655, #00d4ff)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontWeight: '900',
+                textTransform: 'uppercase',
+                letterSpacing: '2px'
+              }}>
+                📋 Fixed Points
+              </h2>
+              <div style={{
+                height: '3px',
+                background: 'linear-gradient(90deg, #ff4655, #00d4ff)',
+                borderRadius: '2px',
+                margin: '0 auto',
+                width: '200px',
+                boxShadow: '0 0 20px rgba(255, 70, 85, 0.5)'
+              }}></div>
+            </div>
+            
             {fixedPoints.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#718096' }}>
-                まだ定点が投稿されていません
-              </p>
+              <div style={{ 
+                textAlign: 'center', 
+                color: 'rgba(255, 255, 255, 0.6)',
+                fontSize: '18px',
+                padding: '60px 20px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                🎯 No fixed points posted yet. Be the first to share your setup!
+              </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
+                gap: '20px',
+                width: '100%' 
+              }}>
                 {fixedPoints.map((fixedPoint) => {
                   // エージェントとマップ情報を取得
                   const agent = agents.find(a => a.uuid === fixedPoint.character_id)
@@ -1105,65 +1240,188 @@ function App() {
                     <div
                       key={fixedPoint.id}
                       style={{
-                        padding: '20px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        backgroundColor: 'white',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                        position: 'relative',
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '16px',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s ease',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px)'
+                        e.currentTarget.style.borderColor = '#ff4655'
+                        e.currentTarget.style.boxShadow = '0 20px 40px rgba(255, 70, 85, 0.3)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                        e.currentTarget.style.boxShadow = 'none'
                       }}
                     >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                          <h3 
-                            style={{ 
-                              fontSize: '20px', 
-                              margin: 0,
-                              cursor: 'pointer',
-                              color: '#3182ce'
-                            }}
-                            onClick={() => fetchFixedPointDetail(fixedPoint.id)}
-                          >
-                            {fixedPoint.title}
-                          </h3>
-                          <button
-                            onClick={() => toggleFavorite(fixedPoint.id, fixedPoint.is_favorited)}
-                            style={{
-                              backgroundColor: 'transparent',
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontSize: '20px',
-                              padding: '4px'
-                            }}
-                          >
-                            {fixedPoint.is_favorited ? '❤️' : '🤍'} {fixedPoint.favorites_count}
-                          </button>
-                        </div>
+                      {/* Top Section with Map Background */}
+                      <div style={{
+                        position: 'relative',
+                        height: '120px',
+                        background: map ? `url(${map.displayIcon})` : 'linear-gradient(45deg, #1a2332, #0f1419)',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                      }}>
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.8) 100%)'
+                        }} />
                         
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        {/* Agent Icon */}
+                        {agent && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '-20px',
+                            left: '20px',
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '12px',
+                            background: '#1a2332',
+                            border: '3px solid #ff4655',
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)'
+                          }}>
+                            <img 
+                              src={agent.displayIcon} 
+                              alt={agent.displayName}
+                              style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'cover' 
+                              }}
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Favorite Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleFavorite(fixedPoint.id, fixedPoint.is_favorited)
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '12px',
+                            right: '12px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            color: 'white',
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            backdropFilter: 'blur(10px)',
+                            transition: 'all 0.3s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            const target = e.target as HTMLButtonElement
+                            target.style.background = 'rgba(255, 70, 85, 0.5)'
+                          }}
+                          onMouseLeave={(e) => {
+                            const target = e.target as HTMLButtonElement
+                            target.style.background = 'rgba(0, 0, 0, 0.5)'
+                          }}
+                        >
+                          {fixedPoint.is_favorited ? '❤️' : '🤍'} {fixedPoint.favorites_count}
+                        </button>
+                      </div>
+                      
+                      {/* Content Section */}
+                      <div 
+                        style={{ 
+                          padding: '40px 20px 20px 20px',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => fetchFixedPointDetail(fixedPoint.id)}
+                      >
+                        <h3 style={{ 
+                          fontSize: '20px', 
+                          margin: '0 0 16px 0',
+                          color: '#ffffff',
+                          fontWeight: '700',
+                          lineHeight: '1.4'
+                        }}>
+                          {fixedPoint.title}
+                        </h3>
+                        
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '16px', 
+                          alignItems: 'center',
+                          marginBottom: '16px'
+                        }}>
                           {agent && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <img 
-                                src={agent.displayIcon} 
-                                alt={agent.displayName}
-                                style={{ width: '24px', height: '24px', borderRadius: '4px' }}
-                              />
-                              <span style={{ fontSize: '14px' }}>{agent.displayName}</span>
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '8px',
+                              color: '#00d4ff',
+                              fontSize: '16px',
+                              fontWeight: '600'
+                            }}>
+                              🎯 {agent.displayName}
                             </div>
                           )}
                           {map && (
-                            <span style={{ fontSize: '14px', color: '#718096' }}>• {map.displayName}</span>
+                            <div style={{ 
+                              color: '#ff4655',
+                              fontSize: '16px',
+                              fontWeight: '600'
+                            }}>
+                              🗺️ {map.displayName}
+                            </div>
                           )}
                         </div>
                         
-                        <div style={{ fontSize: '14px', color: '#718096' }}>
-                          <p style={{ margin: '4px 0' }}>投稿者: {fixedPoint.username}</p>
-                          <p style={{ margin: '4px 0' }}>
-                            投稿日: {new Date(fixedPoint.created_at).toLocaleDateString('ja-JP')}
-                          </p>
+                        <div style={{ 
+                          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                          paddingTop: '16px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <div style={{ 
+                            fontSize: '13px', 
+                            color: 'rgba(255, 255, 255, 0.6)'
+                          }}>
+                            <div style={{ marginBottom: '4px' }}>
+                              👤 {fixedPoint.username}
+                            </div>
+                            <div>
+                              📅 {new Date(fixedPoint.created_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric' 
+                              })}
+                            </div>
+                          </div>
+                          
                           {fixedPoint.steps && (
-                            <p style={{ margin: '4px 0' }}>
-                              ステップ数: {fixedPoint.steps.length}
-                            </p>
+                            <div style={{
+                              background: 'rgba(159, 122, 234, 0.2)',
+                              border: '1px solid #9f7aea',
+                              borderRadius: '20px',
+                              padding: '4px 12px',
+                              fontSize: '12px',
+                              color: '#9f7aea',
+                              fontWeight: '600'
+                            }}>
+                              {fixedPoint.steps.length} Steps
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1178,123 +1436,675 @@ function App() {
         {/* 定点投稿フォーム */}
         {showData === 'create-fixed-point' && currentUser && (
           <div style={{
-            maxWidth: '600px',
+            maxWidth: '1600px',
             margin: '0 auto',
-            padding: '24px',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            backgroundColor: 'white'
+            padding: '48px',
+            background: 'linear-gradient(135deg, rgba(255, 70, 85, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%)',
+            backdropFilter: 'blur(20px)',
+            borderRadius: '20px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
           }}>
-            <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>定点を投稿</h2>
-            <form onSubmit={createFixedPoint} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label htmlFor="title" style={{ display: 'block', marginBottom: '4px' }}>タイトル</label>
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '32px'
+            }}>
+              <h2 style={{ 
+                fontSize: '36px', 
+                margin: '0 0 8px 0',
+                background: 'linear-gradient(45deg, #ff4655, #00d4ff)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                fontWeight: '900',
+                textShadow: '0 0 30px rgba(255, 70, 85, 0.5)'
+              }}>
+                ⚡ POST FIXED POINT
+              </h2>
+              <div style={{
+                height: '3px',
+                background: 'linear-gradient(90deg, #ff4655, #00d4ff)',
+                borderRadius: '2px',
+                margin: '0 auto',
+                width: '200px',
+                boxShadow: '0 0 20px rgba(255, 70, 85, 0.5)'
+              }}></div>
+            </div>
+            <form onSubmit={createFixedPoint} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '16px',
+                padding: '20px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <label htmlFor="title" style={{ 
+                  display: 'block', 
+                  marginBottom: '12px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>📝 TITLE</label>
                 <input
                   type="text"
                   id="title"
                   name="title"
                   required
                   maxLength={255}
-                  placeholder="例: ヘイヴンA サイト リテイク用セットアップ"
+                  placeholder="e.g., Haven A Site Retake Setup"
                   style={{
                     width: '100%',
-                    padding: '8px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '4px',
-                    fontSize: '16px'
+                    padding: '16px 20px',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '12px',
+                    fontSize: '16px',
+                    color: '#ffffff',
+                    outline: 'none',
+                    transition: 'all 0.3s ease',
+                    backdropFilter: 'blur(5px)',
+                    '::placeholder': {
+                      color: 'rgba(255, 255, 255, 0.5)'
+                    }
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#ff4655'
+                    e.target.style.boxShadow = '0 0 20px rgba(255, 70, 85, 0.3)'
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                    e.target.style.boxShadow = 'none'
                   }}
                 />
               </div>
               
-              <div>
-                <label htmlFor="character_id" style={{ display: 'block', marginBottom: '4px' }}>エージェント</label>
-                <select
-                  id="character_id"
-                  name="character_id"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '4px',
-                    fontSize: '16px'
-                  }}
-                >
-                  <option value="">エージェントを選択</option>
+              {/* Agent Selection */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '16px',
+                padding: '20px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '16px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>🎯 SELECT AGENT</label>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+                  gap: '16px',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  padding: '8px'
+                }}>
                   {agents.map(agent => (
-                    <option key={agent.uuid} value={agent.uuid}>
-                      {agent.displayName}
-                    </option>
+                    <div
+                      key={agent.uuid}
+                      onClick={() => setSelectedAgent(agent.uuid)}
+                      style={{
+                        position: 'relative',
+                        cursor: 'pointer',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        border: selectedAgent === agent.uuid ? '3px solid #ff4655' : '2px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        transition: 'all 0.3s ease',
+                        transform: selectedAgent === agent.uuid ? 'scale(1.05)' : 'scale(1)',
+                        boxShadow: selectedAgent === agent.uuid ? '0 0 20px rgba(255, 70, 85, 0.5)' : '0 4px 15px rgba(0, 0, 0, 0.2)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedAgent !== agent.uuid) {
+                          e.currentTarget.style.transform = 'scale(1.02)'
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedAgent !== agent.uuid) {
+                          e.currentTarget.style.transform = 'scale(1)'
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                        }
+                      }}
+                    >
+                      <img
+                        src={agent.displayIcon}
+                        alt={agent.displayName}
+                        style={{
+                          width: '100%',
+                          height: '80px',
+                          objectFit: 'cover',
+                          display: 'block'
+                        }}
+                      />
+                      <div style={{
+                        padding: '8px',
+                        textAlign: 'center',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: '#ffffff',
+                        background: 'rgba(0, 0, 0, 0.5)'
+                      }}>
+                        {agent.displayName}
+                      </div>
+                      {selectedAgent === agent.uuid && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: '#ff4655',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          color: 'white',
+                          fontWeight: 'bold'
+                        }}>
+                          ✓
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </select>
+                </div>
               </div>
-              
-              <div>
-                <label htmlFor="map_id" style={{ display: 'block', marginBottom: '4px' }}>マップ</label>
-                <select
-                  id="map_id"
-                  name="map_id"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '4px',
-                    fontSize: '16px'
-                  }}
-                >
-                  <option value="">マップを選択</option>
+
+              {/* Map Selection */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '16px',
+                padding: '20px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '16px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#ffffff',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>🗺️ SELECT MAP</label>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', 
+                  gap: '16px',
+                  maxHeight: '500px',
+                  overflowY: 'auto',
+                  padding: '8px'
+                }}>
                   {maps.map(map => (
-                    <option key={map.uuid} value={map.uuid}>
-                      {map.displayName}
-                    </option>
+                    <div
+                      key={map.uuid}
+                      onClick={() => setSelectedMap(map.uuid)}
+                      style={{
+                        position: 'relative',
+                        cursor: 'pointer',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        border: selectedMap === map.uuid ? '3px solid #00d4ff' : '2px solid rgba(255, 255, 255, 0.2)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        transition: 'all 0.3s ease',
+                        transform: selectedMap === map.uuid ? 'scale(1.05)' : 'scale(1)',
+                        boxShadow: selectedMap === map.uuid ? '0 0 20px rgba(0, 212, 255, 0.5)' : '0 4px 15px rgba(0, 0, 0, 0.2)'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedMap !== map.uuid) {
+                          e.currentTarget.style.transform = 'scale(1.02)'
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedMap !== map.uuid) {
+                          e.currentTarget.style.transform = 'scale(1)'
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                        }
+                      }}
+                    >
+                      <img
+                        src={map.splash}
+                        alt={map.displayName}
+                        style={{
+                          width: '100%',
+                          height: '100px',
+                          objectFit: 'cover',
+                          display: 'block'
+                        }}
+                      />
+                      <div style={{
+                        padding: '12px',
+                        textAlign: 'center',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        color: '#ffffff',
+                        background: 'rgba(0, 0, 0, 0.7)'
+                      }}>
+                        {map.displayName}
+                      </div>
+                      {selectedMap === map.uuid && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          background: '#00d4ff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          color: 'white',
+                          fontWeight: 'bold'
+                        }}>
+                          ✓
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </select>
+                </div>
               </div>
               
-              <div>
-                <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>ステップ（最低1つ、最大5つ）</h3>
-                {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} style={{ marginBottom: '20px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                      ステップ {i} {i === 1 && <span style={{ color: '#e53e3e' }}>*</span>}
-                    </label>
+              {/* Map Position Setup */}
+              {selectedMap && (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  marginTop: '20px'
+                }}>
+                  <h3 style={{ 
+                    fontSize: '18px', 
+                    margin: '0 0 16px 0',
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}>🎯 MAP POSITIONS</h3>
+                  
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMapMode('start')
+                        setShowMapModal(true)
+                      }}
+                      style={{
+                        flex: '1',
+                        minWidth: '200px',
+                        padding: '16px 20px',
+                        background: startPosition 
+                          ? 'linear-gradient(135deg, rgba(255, 70, 85, 0.3), rgba(255, 70, 85, 0.2))'
+                          : 'rgba(255, 255, 255, 0.1)',
+                        border: startPosition
+                          ? '2px solid #ff4655'
+                          : '2px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '12px',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.target as HTMLButtonElement).style.borderColor = '#ff4655'
+                        ;(e.target as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(255, 70, 85, 0.3), rgba(255, 70, 85, 0.2))'
+                        ;(e.target as HTMLButtonElement).style.transform = 'translateY(-2px)'
+                        ;(e.target as HTMLButtonElement).style.boxShadow = '0 5px 20px rgba(255, 70, 85, 0.3)'
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!startPosition) {
+                          (e.target as HTMLButtonElement).style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                          ;(e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.1)'
+                        }
+                        (e.target as HTMLButtonElement).style.transform = 'translateY(0)'
+                        ;(e.target as HTMLButtonElement).style.boxShadow = 'none'
+                      }}
+                    >
+                      <span style={{ fontSize: '20px' }}>📍</span>
+                      {startPosition ? '✓ Starting Position Set' : 'Set Starting Position'}
+                    </button>
                     
-                    <div style={{ marginBottom: '8px' }}>
-                      <label htmlFor={`step${i}_image`} style={{ display: 'block', marginBottom: '4px' }}>
-                        画像
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMapMode('skill')
+                        setShowMapModal(true)
+                      }}
+                      style={{
+                        flex: '1',
+                        minWidth: '200px',
+                        padding: '16px 20px',
+                        background: skillPosition 
+                          ? 'linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.2))'
+                          : 'rgba(255, 255, 255, 0.1)',
+                        border: skillPosition
+                          ? '2px solid #00d4ff'
+                          : '2px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
+                        color: '#ffffff',
+                        fontSize: '16px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '12px',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.target as HTMLButtonElement).style.borderColor = '#00d4ff'
+                        ;(e.target as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.2))'
+                        ;(e.target as HTMLButtonElement).style.transform = 'translateY(-2px)'
+                        ;(e.target as HTMLButtonElement).style.boxShadow = '0 5px 20px rgba(0, 212, 255, 0.3)'
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!skillPosition) {
+                          (e.target as HTMLButtonElement).style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                          ;(e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.1)'
+                        }
+                        (e.target as HTMLButtonElement).style.transform = 'translateY(0)'
+                        ;(e.target as HTMLButtonElement).style.boxShadow = 'none'
+                      }}
+                    >
+                      <span style={{ fontSize: '20px' }}>💥</span>
+                      {skillPosition ? '✓ Skill Target Set' : 'Set Skill Target Position'}
+                    </button>
+                  </div>
+                  
+                  {startPosition && skillPosition && (
+                    <div style={{
+                      marginTop: '16px',
+                      padding: '12px',
+                      background: 'rgba(0, 255, 0, 0.1)',
+                      border: '1px solid rgba(0, 255, 0, 0.3)',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      textAlign: 'center'
+                    }}>
+                      ✅ Both positions set! Ready to create your fixed point.
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Steps Section */}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '16px',
+                padding: '20px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginBottom: '20px'
+                }}>
+                  <h3 style={{ 
+                    fontSize: '18px', 
+                    margin: '0',
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}>⚡ STEPS (1-5 REQUIRED)</h3>
+                  <div style={{
+                    height: '2px',
+                    background: 'linear-gradient(90deg, #ff4655, #00d4ff)',
+                    borderRadius: '2px',
+                    marginLeft: '16px',
+                    flex: 1,
+                    maxWidth: '100px'
+                  }}></div>
+                </div>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))',
+                  gap: '24px'
+                }}>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} style={{ 
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    position: 'relative'
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: '-10px',
+                      left: '20px',
+                      background: i === 1 ? '#ff4655' : '#00d4ff',
+                      color: 'white',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      textTransform: 'uppercase'
+                    }}>
+                      Step {i} {i === 1 && '*'}
+                    </div>
+                    
+                    <div style={{ marginTop: '8px', marginBottom: '16px' }}>
+                      <label style={{ 
+                        display: 'block', 
+                        marginBottom: '8px',
+                        fontSize: '16px',
+                        color: '#ffffff',
+                        fontWeight: '600'
+                      }}>
+                        📸 Image Upload
                       </label>
+                      
+                      {/* Hidden File Input */}
                       <input
                         type="file"
                         id={`step${i}_image`}
                         name={`step${i}_image`}
                         accept="image/*"
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '4px',
-                          fontSize: '14px'
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          handleFileChange(i, file)
                         }}
                       />
+                      
+                      {/* Custom Upload Area */}
+                      <div
+                        onClick={() => {
+                          const input = document.getElementById(`step${i}_image`)
+                          input?.click()
+                        }}
+                        onDragEnter={(e) => handleDrag(e, i)}
+                        onDragLeave={(e) => handleDrag(e, i)}
+                        onDragOver={(e) => handleDrag(e, i)}
+                        onDrop={(e) => handleDrop(e, i)}
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          minHeight: stepPreviews[i] ? '200px' : '120px',
+                          background: dragActive[i] 
+                            ? 'linear-gradient(135deg, rgba(159, 122, 234, 0.2), rgba(255, 70, 85, 0.2))'
+                            : 'rgba(255, 255, 255, 0.05)',
+                          border: dragActive[i]
+                            ? '3px dashed #9f7aea'
+                            : stepPreviews[i]
+                            ? '2px solid #00d4ff'
+                            : '2px dashed rgba(255, 255, 255, 0.3)',
+                          borderRadius: '16px',
+                          cursor: 'pointer',
+                          overflow: 'hidden',
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!stepPreviews[i]) {
+                            e.currentTarget.style.borderColor = '#9f7aea'
+                            e.currentTarget.style.background = 'rgba(159, 122, 234, 0.1)'
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!stepPreviews[i] && !dragActive[i]) {
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                          }
+                        }}
+                      >
+                        {stepPreviews[i] ? (
+                          <>
+                            <img
+                              src={stepPreviews[i]}
+                              alt={`Preview ${i}`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                            <div style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              background: 'linear-gradient(to bottom, transparent 60%, rgba(0, 0, 0, 0.7) 100%)',
+                              display: 'flex',
+                              alignItems: 'flex-end',
+                              padding: '16px'
+                            }}>
+                              <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                alignItems: 'center'
+                              }}>
+                                <span style={{
+                                  color: 'white',
+                                  fontSize: '16px',
+                                  fontWeight: '600'
+                                }}>
+                                  ✅ Image uploaded
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleFileChange(i, null)
+                                    const input = document.getElementById(`step${i}_image`) as HTMLInputElement
+                                    if (input) input.value = ''
+                                  }}
+                                  style={{
+                                    background: 'rgba(255, 70, 85, 0.2)',
+                                    border: '1px solid #ff4655',
+                                    borderRadius: '8px',
+                                    padding: '4px 12px',
+                                    color: '#ff4655',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    fontWeight: '600',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    const target = e.target as HTMLButtonElement
+                                    target.style.background = '#ff4655'
+                                    target.style.color = 'white'
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    const target = e.target as HTMLButtonElement
+                                    target.style.background = 'rgba(255, 70, 85, 0.2)'
+                                    target.style.color = '#ff4655'
+                                  }}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{
+                            textAlign: 'center',
+                            padding: '20px',
+                            color: dragActive[i] ? '#9f7aea' : 'rgba(255, 255, 255, 0.7)'
+                          }}>
+                            <div style={{
+                              fontSize: '36px',
+                              marginBottom: '8px',
+                              filter: dragActive[i] ? 'brightness(1.5)' : 'brightness(1)'
+                            }}>
+                              {dragActive[i] ? '🎯' : '📷'}
+                            </div>
+                            <div style={{
+                              fontSize: '16px',
+                              fontWeight: '600',
+                              marginBottom: '4px'
+                            }}>
+                              {dragActive[i] ? 'Drop image here!' : 'Click or drag image'}
+                            </div>
+                            <div style={{
+                              fontSize: '12px',
+                              opacity: 0.7
+                            }}>
+                              JPG, PNG, GIF up to 10MB
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     
                     <div>
-                      <label htmlFor={`step${i}_description`} style={{ display: 'block', marginBottom: '4px' }}>
-                        説明
+                      <label htmlFor={`step${i}_description`} style={{ 
+                        display: 'block', 
+                        marginBottom: '8px',
+                        fontSize: '16px',
+                        color: '#ffffff',
+                        fontWeight: '600'
+                      }}>
+                        📝 Description
                       </label>
                       <textarea
                         id={`step${i}_description`}
                         name={`step${i}_description`}
                         rows={3}
-                        placeholder={i === 1 ? "ここに手順を記載（画像と説明の少なくとも一方は必須）" : "追加の手順があれば記載"}
+                        placeholder={i === 1 ? "Enter step description (image or description required)" : "Additional step description (optional)"}
                         style={{
                           width: '100%',
-                          padding: '8px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '4px',
+                          padding: '12px 16px',
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          border: '2px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '8px',
                           fontSize: '16px',
-                          resize: 'vertical'
+                          color: '#ffffff',
+                          outline: 'none',
+                          resize: 'vertical',
+                          transition: 'all 0.3s ease',
+                          minHeight: '80px'
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#9f7aea'
+                          e.target.style.boxShadow = '0 0 15px rgba(159, 122, 234, 0.3)'
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                          e.target.style.boxShadow = 'none'
                         }}
                       />
                     </div>
@@ -1302,152 +2112,505 @@ function App() {
                 ))}
               </div>
               
-              <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ display: 'flex', gap: '20px', marginTop: '32px' }}>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !selectedAgent || !selectedMap}
                   style={{
                     flex: 1,
-                    backgroundColor: '#9f7aea',
+                    background: isLoading || !selectedAgent || !selectedMap 
+                      ? 'rgba(255, 255, 255, 0.1)' 
+                      : 'linear-gradient(135deg, #ff4655, #00d4ff)',
                     color: 'white',
-                    padding: '12px',
-                    borderRadius: '4px',
+                    padding: '18px 32px',
+                    borderRadius: '16px',
                     border: 'none',
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    opacity: isLoading ? 0.6 : 1,
-                    fontSize: '16px',
-                    fontWeight: 'bold'
+                    cursor: isLoading || !selectedAgent || !selectedMap ? 'not-allowed' : 'pointer',
+                    opacity: isLoading || !selectedAgent || !selectedMap ? 0.5 : 1,
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    transition: 'all 0.3s ease',
+                    boxShadow: isLoading || !selectedAgent || !selectedMap 
+                      ? 'none' 
+                      : '0 8px 25px rgba(255, 70, 85, 0.3)',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isLoading && selectedAgent && selectedMap) {
+                      const target = e.target as HTMLButtonElement
+                      target.style.transform = 'translateY(-2px)'
+                      target.style.boxShadow = '0 12px 35px rgba(255, 70, 85, 0.4)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isLoading && selectedAgent && selectedMap) {
+                      const target = e.target as HTMLButtonElement
+                      target.style.transform = 'translateY(0)'
+                      target.style.boxShadow = '0 8px 25px rgba(255, 70, 85, 0.3)'
+                    }
                   }}
                 >
-                  {isLoading ? '投稿中...' : '投稿する'}
+                  {isLoading ? '⏳ POSTING...' : '🚀 POST FIXED POINT'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowData('fixed-points')}
+                  onClick={() => {
+                    setShowData('fixed-points')
+                    setSelectedAgent('')
+                    setSelectedMap('')
+                    setStartPosition(null)
+                    setSkillPosition(null)
+                    setStepPreviews({})
+                  }}
                   style={{
-                    backgroundColor: '#e2e8f0',
-                    color: '#2d3748',
-                    padding: '12px 24px',
-                    borderRadius: '4px',
-                    border: 'none',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#ffffff',
+                    padding: '18px 32px',
+                    borderRadius: '16px',
+                    border: '2px solid rgba(255, 255, 255, 0.2)',
                     cursor: 'pointer',
-                    fontSize: '16px'
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    transition: 'all 0.3s ease',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                  onMouseEnter={(e) => {
+                    const target = e.target as HTMLButtonElement
+                    target.style.borderColor = '#ff4655'
+                    target.style.background = 'rgba(255, 70, 85, 0.1)'
+                    target.style.transform = 'translateY(-2px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    const target = e.target as HTMLButtonElement
+                    target.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                    target.style.background = 'rgba(255, 255, 255, 0.1)'
+                    target.style.transform = 'translateY(0)'
                   }}
                 >
-                  キャンセル
+                  ❌ CANCEL
                 </button>
               </div>
             </form>
+            
+            {/* Interactive Map Modal */}
+            {showMapModal && selectedMap && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0, 0, 0, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '20px'
+              }}>
+                <div style={{
+                  position: 'relative',
+                  maxWidth: '800px',
+                  width: '100%'
+                }}>
+                  {/* Close button */}
+                  <button
+                    onClick={() => setShowMapModal(false)}
+                    style={{
+                      position: 'absolute',
+                      top: '-40px',
+                      right: '0',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '12px',
+                      padding: '8px 16px',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      transition: 'all 0.3s ease',
+                      zIndex: 10
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.target as HTMLButtonElement).style.background = 'rgba(255, 70, 85, 0.2)'
+                      ;(e.target as HTMLButtonElement).style.borderColor = '#ff4655'
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.1)'
+                      ;(e.target as HTMLButtonElement).style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                    }}
+                  >
+                    ✕ Close
+                  </button>
+                  
+                  <InteractiveMap
+                    mapImageUrl={maps.find(m => m.uuid === selectedMap)?.displayIcon || ''}
+                    mapName={maps.find(m => m.uuid === selectedMap)?.displayName || ''}
+                    mode={mapMode}
+                    startPosition={startPosition}
+                    skillPosition={skillPosition}
+                    onPositionSelect={(pos) => {
+                      setStartPosition(pos)
+                      // 自動的にスキルモードに切り替え
+                      if (!skillPosition) {
+                        setMapMode('skill')
+                      } else {
+                        setShowMapModal(false)
+                      }
+                    }}
+                    onSkillPositionSelect={(pos) => {
+                      setSkillPosition(pos)
+                      setShowMapModal(false)
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         )}
         
         {/* 定点詳細表示 */}
         {selectedFixedPoint && showData === 'none' && (
           <div style={{
-            maxWidth: '800px',
+            maxWidth: '1400px',
             margin: '0 auto',
-            padding: '24px',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            backgroundColor: 'white'
+            padding: '32px',
+            background: 'rgba(20, 30, 45, 0.95)',
+            borderRadius: '20px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)'
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '28px', margin: 0 }}>{selectedFixedPoint.title}</h2>
+            {/* ヘッダー部分 */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'start', 
+              marginBottom: '32px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              paddingBottom: '24px'
+            }}>
+              <h2 style={{ 
+                fontSize: '36px', 
+                margin: 0,
+                background: 'linear-gradient(135deg, #ff4655, #00d4ff)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: '800',
+                letterSpacing: '-1px'
+              }}>{selectedFixedPoint.title}</h2>
               <button
                 onClick={() => {
                   setSelectedFixedPoint(null)
                   setShowData('fixed-points')
                 }}
                 style={{
-                  backgroundColor: '#e2e8f0',
-                  color: '#2d3748',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  border: 'none',
+                  background: 'linear-gradient(135deg, rgba(255, 70, 85, 0.2), rgba(255, 70, 85, 0.3))',
+                  color: '#ffffff',
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 70, 85, 0.5)',
                   cursor: 'pointer',
-                  fontSize: '14px'
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(255, 70, 85, 0.3), rgba(255, 70, 85, 0.4))'
+                  ;(e.target as HTMLButtonElement).style.borderColor = 'rgba(255, 70, 85, 0.7)'
+                  ;(e.target as HTMLButtonElement).style.transform = 'translateY(-2px)'
+                  ;(e.target as HTMLButtonElement).style.boxShadow = '0 5px 20px rgba(255, 70, 85, 0.3)'
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLButtonElement).style.background = 'linear-gradient(135deg, rgba(255, 70, 85, 0.2), rgba(255, 70, 85, 0.3))'
+                  ;(e.target as HTMLButtonElement).style.borderColor = 'rgba(255, 70, 85, 0.5)'
+                  ;(e.target as HTMLButtonElement).style.transform = 'translateY(0)'
+                  ;(e.target as HTMLButtonElement).style.boxShadow = 'none'
                 }}
               >
-                一覧に戻る
+                ← Back to List
               </button>
             </div>
             
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '8px' }}>
+            {/* メタ情報 */}
+            <div style={{ 
+              marginBottom: '32px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '16px',
+              padding: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
                 {agents.find(a => a.uuid === selectedFixedPoint.character_id) && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '12px',
+                    background: 'rgba(255, 70, 85, 0.1)',
+                    padding: '8px 16px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 70, 85, 0.3)'
+                  }}>
                     <img 
                       src={agents.find(a => a.uuid === selectedFixedPoint.character_id)?.displayIcon} 
                       alt={agents.find(a => a.uuid === selectedFixedPoint.character_id)?.displayName}
-                      style={{ width: '32px', height: '32px', borderRadius: '4px' }}
+                      style={{ 
+                        width: '40px', 
+                        height: '40px', 
+                        borderRadius: '8px',
+                        border: '2px solid rgba(255, 255, 255, 0.2)'
+                      }}
                     />
-                    <span style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                    <span style={{ 
+                      fontSize: '18px', 
+                      fontWeight: '700',
+                      color: '#ff4655',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>
                       {agents.find(a => a.uuid === selectedFixedPoint.character_id)?.displayName}
                     </span>
                   </div>
                 )}
                 {maps.find(m => m.uuid === selectedFixedPoint.map_id) && (
-                  <span style={{ fontSize: '16px', color: '#718096' }}>
-                    • {maps.find(m => m.uuid === selectedFixedPoint.map_id)?.displayName}
-                  </span>
+                  <div style={{
+                    background: 'rgba(0, 212, 255, 0.1)',
+                    padding: '8px 16px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(0, 212, 255, 0.3)'
+                  }}>
+                    <span style={{ 
+                      fontSize: '16px', 
+                      color: '#00d4ff',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>
+                      📍 {maps.find(m => m.uuid === selectedFixedPoint.map_id)?.displayName}
+                    </span>
+                  </div>
                 )}
               </div>
               
-              <div style={{ fontSize: '14px', color: '#718096' }}>
-                <p style={{ margin: '4px 0' }}>投稿者: {selectedFixedPoint.username}</p>
-                <p style={{ margin: '4px 0' }}>
-                  投稿日: {new Date(selectedFixedPoint.created_at).toLocaleDateString('ja-JP')}
-                </p>
+              <div style={{ 
+                display: 'flex', 
+                gap: '20px',
+                fontSize: '16px', 
+                color: 'rgba(255, 255, 255, 0.7)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#ff4655' }}>👤</span>
+                  <span>Posted by <strong style={{ color: '#ffffff' }}>{selectedFixedPoint.username}</strong></span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#00d4ff' }}>📅</span>
+                  <span>{new Date(selectedFixedPoint.created_at).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}</span>
+                </div>
               </div>
             </div>
             
-            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-              <h3 style={{ fontSize: '20px', marginBottom: '16px' }}>ステップ</h3>
+            {/* マップ表示セクション */}
+            {selectedFixedPoint.steps && selectedFixedPoint.steps.length > 0 && (() => {
+              const firstStep = selectedFixedPoint.steps.find(s => s.step_order === 1)
+              console.log('First step data:', firstStep)
+              const hasPositions = firstStep && (firstStep.position_x !== null || firstStep.skill_position_x !== null)
+              console.log('Has positions:', hasPositions)
+              
+              if (!hasPositions) return null
+              
+              return (
+                <div style={{
+                  marginBottom: '32px'
+                }}>
+                  <h3 style={{ 
+                    fontSize: '24px', 
+                    marginBottom: '24px',
+                    color: '#ffffff',
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <span style={{
+                      background: 'linear-gradient(135deg, #ff4655, #00d4ff)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}>
+                      🗺️ TACTICAL MAP VIEW
+                    </span>
+                  </h3>
+                  
+                  <MapDisplay
+                    mapImageUrl={maps.find(m => m.uuid === selectedFixedPoint.map_id)?.displayIcon || ''}
+                    mapName={maps.find(m => m.uuid === selectedFixedPoint.map_id)?.displayName || ''}
+                    startPosition={
+                      firstStep.position_x !== null && firstStep.position_x !== undefined && 
+                      firstStep.position_y !== null && firstStep.position_y !== undefined
+                        ? { x: firstStep.position_x, y: firstStep.position_y }
+                        : null
+                    }
+                    skillPosition={
+                      firstStep.skill_position_x !== null && firstStep.skill_position_x !== undefined && 
+                      firstStep.skill_position_y !== null && firstStep.skill_position_y !== undefined
+                        ? { x: firstStep.skill_position_x, y: firstStep.skill_position_y }
+                        : null
+                    }
+                  />
+                </div>
+              )
+            })()}
+            
+            {/* ステップセクション */}
+            <div>
+              <h3 style={{ 
+                fontSize: '24px', 
+                marginBottom: '24px',
+                color: '#ffffff',
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <span style={{
+                  background: 'linear-gradient(135deg, #ff4655, #00d4ff)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}>
+                  📋 STEP-BY-STEP GUIDE
+                </span>
+              </h3>
               {selectedFixedPoint.steps && selectedFixedPoint.steps.length > 0 ? (
-                selectedFixedPoint.steps
-                  .sort((a, b) => a.step_order - b.step_order)
-                  .map((step, index) => (
-                  <div 
-                    key={step.id} 
-                    style={{ 
-                      marginBottom: '24px',
-                      padding: '20px',
-                      backgroundColor: '#f7fafc',
-                      borderRadius: '8px',
-                      border: '1px solid #e2e8f0'
-                    }}
-                  >
-                    <h4 style={{ fontSize: '18px', marginTop: 0, marginBottom: '12px' }}>
-                      ステップ {step.step_order}
-                    </h4>
-                    {step.image_url && (
-                      <div style={{ marginBottom: '12px' }}>
-                        <img 
-                          src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${step.image_url}`}
-                          alt={`ステップ ${step.step_order}`}
-                          style={{ 
-                            maxWidth: '100%',
-                            borderRadius: '4px',
-                            border: '1px solid #e2e8f0'
-                          }}
-                        />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {selectedFixedPoint.steps
+                    .sort((a, b) => a.step_order - b.step_order)
+                    .map((step, index) => (
+                    <div 
+                      key={step.id} 
+                      style={{ 
+                        position: 'relative',
+                        padding: '24px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '16px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        transition: 'all 0.3s ease',
+                        overflow: 'hidden'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
+                        e.currentTarget.style.borderColor = 'rgba(255, 70, 85, 0.3)'
+                        e.currentTarget.style.transform = 'translateX(10px)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)'
+                        e.currentTarget.style.transform = 'translateX(0)'
+                      }}
+                    >
+                      {/* ステップ番号 */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '24px',
+                        left: '-40px',
+                        width: '80px',
+                        height: '80px',
+                        background: 'linear-gradient(135deg, #ff4655, #ff4655)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '32px',
+                        fontWeight: '800',
+                        color: '#ffffff',
+                        boxShadow: '0 8px 24px rgba(255, 70, 85, 0.4)'
+                      }}>
+                        {step.step_order}
                       </div>
-                    )}
-                    {step.description && (
-                      <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{step.description}</p>
-                    )}
-                  </div>
-                ))
+                      
+                      <div style={{ marginLeft: '60px' }}>
+                        {step.image_url && (
+                          <div style={{ 
+                            marginBottom: '16px',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            border: '2px solid rgba(255, 255, 255, 0.1)',
+                            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)'
+                          }}>
+                            <img 
+                              src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${step.image_url}`}
+                              alt={`Step ${step.step_order}`}
+                              style={{ 
+                                width: '100%',
+                                maxWidth: '100%',
+                                display: 'block',
+                                transition: 'transform 0.3s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                (e.target as HTMLImageElement).style.transform = 'scale(1.02)'
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.target as HTMLImageElement).style.transform = 'scale(1)'
+                              }}
+                            />
+                          </div>
+                        )}
+                        {step.description && (
+                          <p style={{ 
+                            margin: 0, 
+                            whiteSpace: 'pre-wrap',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            fontSize: '16px',
+                            lineHeight: '1.6'
+                          }}>{step.description}</p>
+                        )}
+                      </div>
+                      
+                      {/* コネクター線 */}
+                      {index < selectedFixedPoint.steps.length - 1 && (
+                        <div style={{
+                          position: 'absolute',
+                          left: '0',
+                          bottom: '-20px',
+                          width: '2px',
+                          height: '40px',
+                          background: 'linear-gradient(180deg, rgba(255, 70, 85, 0.3), transparent)',
+                          marginLeft: '20px'
+                        }} />
+                      )}
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <p style={{ textAlign: 'center', color: '#718096' }}>
-                  ステップが見つかりません
-                </p>
+                <div style={{ 
+                  textAlign: 'center', 
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  padding: '40px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  No steps found for this fixed point
+                </div>
               )}
             </div>
           </div>
         )}
       </div>
     </div>
+  </div>
   )
 }
 
