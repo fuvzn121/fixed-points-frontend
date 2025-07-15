@@ -67,7 +67,7 @@ function App() {
   const [apiStatus, setApiStatus] = useState<{ message: string; isError: boolean } | null>(null)
   const [agents, setAgents] = useState<Agent[]>([])
   const [maps, setMaps] = useState<Map[]>([])
-  const [showData, setShowData] = useState<'none' | 'agents' | 'maps' | 'fixed-points'>('none')
+  const [showData, setShowData] = useState<'none' | 'agents' | 'maps' | 'fixed-points' | 'create-fixed-point'>('none')
   const [showAuth, setShowAuth] = useState<'none' | 'login' | 'register'>('none')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('access_token'))
@@ -341,6 +341,84 @@ function App() {
     }
   }
 
+  const createFixedPoint = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!accessToken) {
+      setApiStatus({
+        message: '定点の投稿にはログインが必要です',
+        isError: true
+      })
+      return
+    }
+
+    setIsLoading(true)
+    const formData = new FormData(e.currentTarget)
+    
+    // ステップデータを収集
+    const steps = []
+    for (let i = 1; i <= 5; i++) {
+      const description = formData.get(`step${i}_description`)
+      if (description) {
+        steps.push({
+          step_order: i,
+          description: description,
+          image_url: null
+        })
+      }
+    }
+
+    if (steps.length === 0) {
+      setApiStatus({
+        message: '少なくとも1つのステップを入力してください',
+        isError: true
+      })
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/fixed-points/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          title: formData.get('title'),
+          character_id: formData.get('character_id'),
+          map_id: formData.get('map_id'),
+          steps: steps
+        })
+      })
+
+      if (response.ok) {
+        setApiStatus({
+          message: '定点を投稿しました！',
+          isError: false
+        })
+        // フォームをリセット
+        e.currentTarget.reset()
+        // 定点一覧を再取得
+        fetchFixedPoints()
+        setShowData('fixed-points')
+      } else {
+        const data = await response.json()
+        setApiStatus({
+          message: data.detail || '定点の投稿に失敗しました',
+          isError: true
+        })
+      }
+    } catch (error) {
+      setApiStatus({
+        message: '定点投稿エラー',
+        isError: true
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // 初回読み込み時の処理
   useState(() => {
     // ユーザー情報を取得
@@ -499,6 +577,21 @@ function App() {
           >
             {isLoading ? '取得中...' : '定点一覧'}
           </button>
+          {currentUser && (
+            <button 
+              onClick={() => setShowData('create-fixed-point')}
+              style={{
+                backgroundColor: '#9f7aea',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              定点を投稿
+            </button>
+          )}
         </div>
         {apiStatus && (
           <div style={{
@@ -815,6 +908,148 @@ function App() {
                 })}
               </div>
             )}
+          </div>
+        )}
+        
+        {/* 定点投稿フォーム */}
+        {showData === 'create-fixed-point' && currentUser && (
+          <div style={{
+            maxWidth: '600px',
+            margin: '0 auto',
+            padding: '24px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            backgroundColor: 'white'
+          }}>
+            <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>定点を投稿</h2>
+            <form onSubmit={createFixedPoint} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label htmlFor="title" style={{ display: 'block', marginBottom: '4px' }}>タイトル</label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  required
+                  maxLength={255}
+                  placeholder="例: ヘイヴンA サイト リテイク用セットアップ"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="character_id" style={{ display: 'block', marginBottom: '4px' }}>エージェント</label>
+                <select
+                  id="character_id"
+                  name="character_id"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                >
+                  <option value="">エージェントを選択</option>
+                  {agents.map(agent => (
+                    <option key={agent.uuid} value={agent.uuid}>
+                      {agent.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="map_id" style={{ display: 'block', marginBottom: '4px' }}>マップ</label>
+                <select
+                  id="map_id"
+                  name="map_id"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                >
+                  <option value="">マップを選択</option>
+                  {maps.map(map => (
+                    <option key={map.uuid} value={map.uuid}>
+                      {map.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>ステップ（最低1つ、最大5つ）</h3>
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} style={{ marginBottom: '12px' }}>
+                    <label htmlFor={`step${i}_description`} style={{ display: 'block', marginBottom: '4px' }}>
+                      ステップ {i}
+                    </label>
+                    <textarea
+                      id={`step${i}_description`}
+                      name={`step${i}_description`}
+                      rows={3}
+                      placeholder={i === 1 ? "必須: ここに手順を記載" : "任意: 追加の手順があれば記載"}
+                      required={i === 1}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '16px',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#9f7aea',
+                    color: 'white',
+                    padding: '12px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    opacity: isLoading ? 0.6 : 1,
+                    fontSize: '16px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {isLoading ? '投稿中...' : '投稿する'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowData('fixed-points')}
+                  style={{
+                    backgroundColor: '#e2e8f0',
+                    color: '#2d3748',
+                    padding: '12px 24px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px'
+                  }}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </form>
           </div>
         )}
       </div>
