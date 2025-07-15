@@ -72,6 +72,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('access_token'))
   const [fixedPoints, setFixedPoints] = useState<FixedPoint[]>([])
+  const [selectedFixedPoint, setSelectedFixedPoint] = useState<FixedPoint | null>(null)
 
   const checkBackendConnection = async () => {
     setIsLoading(true)
@@ -353,16 +354,56 @@ function App() {
 
     setIsLoading(true)
     const formData = new FormData(e.currentTarget)
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
     
     // ステップデータを収集
     const steps = []
     for (let i = 1; i <= 5; i++) {
       const description = formData.get(`step${i}_description`)
-      if (description) {
+      const imageFile = formData.get(`step${i}_image`) as File
+      
+      if (description || (imageFile && imageFile.size > 0)) {
+        let imageUrl = null
+        
+        // 画像がある場合はアップロード
+        if (imageFile && imageFile.size > 0) {
+          try {
+            const uploadFormData = new FormData()
+            uploadFormData.append('file', imageFile)
+            
+            const uploadResponse = await fetch(`${apiUrl}/api/upload/image`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`
+              },
+              body: uploadFormData
+            })
+            
+            if (uploadResponse.ok) {
+              const uploadData = await uploadResponse.json()
+              imageUrl = uploadData.url
+            } else {
+              setApiStatus({
+                message: `ステップ${i}の画像アップロードに失敗しました`,
+                isError: true
+              })
+              setIsLoading(false)
+              return
+            }
+          } catch (error) {
+            setApiStatus({
+              message: '画像アップロードエラー',
+              isError: true
+            })
+            setIsLoading(false)
+            return
+          }
+        }
+        
         steps.push({
           step_order: i,
-          description: description,
-          image_url: null
+          description: description || '',
+          image_url: imageUrl
         })
       }
     }
@@ -377,7 +418,6 @@ function App() {
     }
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
       const response = await fetch(`${apiUrl}/api/fixed-points/`, {
         method: 'POST',
         headers: {
@@ -862,7 +902,20 @@ function App() {
                     >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                          <h3 style={{ fontSize: '20px', margin: 0 }}>{fixedPoint.title}</h3>
+                          <h3 
+                            style={{ 
+                              fontSize: '20px', 
+                              margin: 0,
+                              cursor: 'pointer',
+                              color: '#3182ce'
+                            }}
+                            onClick={() => {
+                              setSelectedFixedPoint(fixedPoint)
+                              setShowData('none')
+                            }}
+                          >
+                            {fixedPoint.title}
+                          </h3>
                           <button
                             onClick={() => toggleFavorite(fixedPoint.id, fixedPoint.is_favorited)}
                             style={{
@@ -991,25 +1044,49 @@ function App() {
               <div>
                 <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>ステップ（最低1つ、最大5つ）</h3>
                 {[1, 2, 3, 4, 5].map(i => (
-                  <div key={i} style={{ marginBottom: '12px' }}>
-                    <label htmlFor={`step${i}_description`} style={{ display: 'block', marginBottom: '4px' }}>
-                      ステップ {i}
+                  <div key={i} style={{ marginBottom: '20px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                      ステップ {i} {i === 1 && <span style={{ color: '#e53e3e' }}>*</span>}
                     </label>
-                    <textarea
-                      id={`step${i}_description`}
-                      name={`step${i}_description`}
-                      rows={3}
-                      placeholder={i === 1 ? "必須: ここに手順を記載" : "任意: 追加の手順があれば記載"}
-                      required={i === 1}
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '4px',
-                        fontSize: '16px',
-                        resize: 'vertical'
-                      }}
-                    />
+                    
+                    <div style={{ marginBottom: '8px' }}>
+                      <label htmlFor={`step${i}_image`} style={{ display: 'block', marginBottom: '4px' }}>
+                        画像
+                      </label>
+                      <input
+                        type="file"
+                        id={`step${i}_image`}
+                        name={`step${i}_image`}
+                        accept="image/*"
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '4px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor={`step${i}_description`} style={{ display: 'block', marginBottom: '4px' }}>
+                        説明
+                      </label>
+                      <textarea
+                        id={`step${i}_description`}
+                        name={`step${i}_description`}
+                        rows={3}
+                        placeholder={i === 1 ? "ここに手順を記載（画像と説明の少なくとも一方は必須）" : "追加の手順があれば記載"}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '4px',
+                          fontSize: '16px',
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1050,6 +1127,106 @@ function App() {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+        
+        {/* 定点詳細表示 */}
+        {selectedFixedPoint && showData === 'none' && (
+          <div style={{
+            maxWidth: '800px',
+            margin: '0 auto',
+            padding: '24px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            backgroundColor: 'white'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '28px', margin: 0 }}>{selectedFixedPoint.title}</h2>
+              <button
+                onClick={() => {
+                  setSelectedFixedPoint(null)
+                  setShowData('fixed-points')
+                }}
+                style={{
+                  backgroundColor: '#e2e8f0',
+                  color: '#2d3748',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                一覧に戻る
+              </button>
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '8px' }}>
+                {agents.find(a => a.uuid === selectedFixedPoint.character_id) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <img 
+                      src={agents.find(a => a.uuid === selectedFixedPoint.character_id)?.displayIcon} 
+                      alt={agents.find(a => a.uuid === selectedFixedPoint.character_id)?.displayName}
+                      style={{ width: '32px', height: '32px', borderRadius: '4px' }}
+                    />
+                    <span style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                      {agents.find(a => a.uuid === selectedFixedPoint.character_id)?.displayName}
+                    </span>
+                  </div>
+                )}
+                {maps.find(m => m.uuid === selectedFixedPoint.map_id) && (
+                  <span style={{ fontSize: '16px', color: '#718096' }}>
+                    • {maps.find(m => m.uuid === selectedFixedPoint.map_id)?.displayName}
+                  </span>
+                )}
+              </div>
+              
+              <div style={{ fontSize: '14px', color: '#718096' }}>
+                <p style={{ margin: '4px 0' }}>投稿者: {selectedFixedPoint.username}</p>
+                <p style={{ margin: '4px 0' }}>
+                  投稿日: {new Date(selectedFixedPoint.created_at).toLocaleDateString('ja-JP')}
+                </p>
+              </div>
+            </div>
+            
+            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+              <h3 style={{ fontSize: '20px', marginBottom: '16px' }}>ステップ</h3>
+              {selectedFixedPoint.steps
+                .sort((a, b) => a.step_order - b.step_order)
+                .map((step, index) => (
+                  <div 
+                    key={step.id} 
+                    style={{ 
+                      marginBottom: '24px',
+                      padding: '20px',
+                      backgroundColor: '#f7fafc',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0'
+                    }}
+                  >
+                    <h4 style={{ fontSize: '18px', marginTop: 0, marginBottom: '12px' }}>
+                      ステップ {step.step_order}
+                    </h4>
+                    {step.image_url && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <img 
+                          src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${step.image_url}`}
+                          alt={`ステップ ${step.step_order}`}
+                          style={{ 
+                            maxWidth: '100%',
+                            borderRadius: '4px',
+                            border: '1px solid #e2e8f0'
+                          }}
+                        />
+                      </div>
+                    )}
+                    {step.description && (
+                      <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{step.description}</p>
+                    )}
+                  </div>
+                ))}
+            </div>
           </div>
         )}
       </div>
