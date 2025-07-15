@@ -343,6 +343,38 @@ function App() {
     }
   }
 
+  const fetchFixedPointDetail = async (fixedPointId: number) => {
+    setIsLoading(true)
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const headers: HeadersInit = {}
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`
+      }
+      
+      const response = await fetch(`${apiUrl}/api/fixed-points/${fixedPointId}`, { headers })
+      const data = await response.json()
+      
+      if (response.ok) {
+        setSelectedFixedPoint(data)
+        setShowData('none')
+      } else {
+        setApiStatus({
+          message: '定点の詳細取得に失敗しました',
+          isError: true
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching fixed point detail:', error)
+      setApiStatus({
+        message: '定点詳細取得エラー',
+        isError: true
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const createFixedPoint = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!accessToken) {
@@ -915,10 +947,7 @@ function App() {
                               cursor: 'pointer',
                               color: '#3182ce'
                             }}
-                            onClick={() => {
-                              setSelectedFixedPoint(fixedPoint)
-                              setShowData('none')
-                            }}
+                            onClick={() => fetchFixedPointDetail(fixedPoint.id)}
                           >
                             {fixedPoint.title}
                           </h3>
@@ -1200,9 +1229,10 @@ function App() {
             
             <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
               <h3 style={{ fontSize: '20px', marginBottom: '16px' }}>ステップ</h3>
-              {selectedFixedPoint.steps
-                .sort((a, b) => a.step_order - b.step_order)
-                .map((step, index) => (
+              {selectedFixedPoint.steps && selectedFixedPoint.steps.length > 0 ? (
+                selectedFixedPoint.steps
+                  .sort((a, b) => a.step_order - b.step_order)
+                  .map((step, index) => (
                   <div 
                     key={step.id} 
                     style={{ 
@@ -1233,7 +1263,12 @@ function App() {
                       <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{step.description}</p>
                     )}
                   </div>
-                ))}
+                ))
+              ) : (
+                <p style={{ textAlign: 'center', color: '#718096' }}>
+                  ステップが見つかりません
+                </p>
+              )}
             </div>
           </div>
         )}
