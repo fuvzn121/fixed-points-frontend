@@ -1,5 +1,25 @@
 import { useState } from 'react'
 
+interface LoginForm {
+  email: string
+  password: string
+}
+
+interface RegisterForm {
+  username: string
+  email: string
+  password: string
+}
+
+interface User {
+  id: number
+  username: string
+  email: string
+  auth_provider: string
+  avatar_url?: string
+  created_at: string
+}
+
 interface Agent {
   uuid: string
   displayName: string
@@ -25,6 +45,9 @@ function App() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [maps, setMaps] = useState<Map[]>([])
   const [showData, setShowData] = useState<'none' | 'agents' | 'maps'>('none')
+  const [showAuth, setShowAuth] = useState<'none' | 'login' | 'register'>('none')
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('access_token'))
 
   const checkBackendConnection = async () => {
     setIsLoading(true)
@@ -99,6 +122,128 @@ function App() {
     }
   }
 
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsLoading(true)
+    const formData = new FormData(e.currentTarget)
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.get('email'),
+          password: formData.get('password')
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        localStorage.setItem('access_token', data.access_token)
+        localStorage.setItem('refresh_token', data.refresh_token)
+        setAccessToken(data.access_token)
+        setShowAuth('none')
+        setApiStatus({
+          message: 'ログインに成功しました！',
+          isError: false
+        })
+        fetchCurrentUser(data.access_token)
+      } else {
+        setApiStatus({
+          message: 'ログインに失敗しました。メールアドレスまたはパスワードが正しくありません。',
+          isError: true
+        })
+      }
+    } catch (error) {
+      setApiStatus({
+        message: 'ログインエラー',
+        isError: true
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsLoading(true)
+    const formData = new FormData(e.currentTarget)
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: formData.get('username'),
+          email: formData.get('email'),
+          password: formData.get('password')
+        })
+      })
+      
+      if (response.ok) {
+        setShowAuth('login')
+        setApiStatus({
+          message: 'ユーザー登録に成功しました！ログインしてください。',
+          isError: false
+        })
+      } else {
+        const data = await response.json()
+        setApiStatus({
+          message: data.detail || 'ユーザー登録に失敗しました',
+          isError: true
+        })
+      }
+    } catch (error) {
+      setApiStatus({
+        message: 'ユーザー登録エラー',
+        isError: true
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchCurrentUser = async (token?: string) => {
+    const authToken = token || accessToken
+    if (!authToken) return
+    
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      })
+      
+      if (response.ok) {
+        const user = await response.json()
+        setCurrentUser(user)
+      }
+    } catch (error) {
+      console.error('Failed to fetch current user:', error)
+    }
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    setAccessToken(null)
+    setCurrentUser(null)
+    setApiStatus({
+      message: 'ログアウトしました',
+      isError: false
+    })
+  }
+
+  // 初回読み込み時に現在のユーザーを取得
+  useState(() => {
+    if (accessToken) {
+      fetchCurrentUser()
+    }
+  })
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -108,6 +253,58 @@ function App() {
         <p style={{ fontSize: '18px', textAlign: 'center', margin: 0 }}>
           React + TypeScript + Chakra UIで構築されたフロントエンドアプリケーション
         </p>
+        
+        {/* ユーザー情報と認証ボタン */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+          {currentUser ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+              <p style={{ margin: 0 }}>ようこそ、{currentUser.username}さん！</p>
+              <button
+                onClick={handleLogout}
+                style={{
+                  backgroundColor: '#e53e3e',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                ログアウト
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <button
+                onClick={() => setShowAuth(showAuth === 'login' ? 'none' : 'login')}
+                style={{
+                  backgroundColor: '#3182ce',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                ログイン
+              </button>
+              <button
+                onClick={() => setShowAuth(showAuth === 'register' ? 'none' : 'register')}
+                style={{
+                  backgroundColor: '#38a169',
+                  color: 'white',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                新規登録
+              </button>
+            </div>
+          )}
+        </div>
+        
         <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
           <button 
             onClick={checkBackendConnection}
@@ -166,6 +363,155 @@ function App() {
             fontWeight: 500
           }}>
             {apiStatus.message}
+          </div>
+        )}
+        
+        {/* ログインフォーム */}
+        {showAuth === 'login' && (
+          <div style={{
+            maxWidth: '400px',
+            margin: '0 auto',
+            padding: '24px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            backgroundColor: 'white'
+          }}>
+            <h2 style={{ fontSize: '24px', marginBottom: '16px', textAlign: 'center' }}>ログイン</h2>
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label htmlFor="email" style={{ display: 'block', marginBottom: '4px' }}>メールアドレス</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+              <div>
+                <label htmlFor="password" style={{ display: 'block', marginBottom: '4px' }}>パスワード</label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                style={{
+                  backgroundColor: '#3182ce',
+                  color: 'white',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.6 : 1,
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                {isLoading ? 'ログイン中...' : 'ログイン'}
+              </button>
+            </form>
+          </div>
+        )}
+        
+        {/* 新規登録フォーム */}
+        {showAuth === 'register' && (
+          <div style={{
+            maxWidth: '400px',
+            margin: '0 auto',
+            padding: '24px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            backgroundColor: 'white'
+          }}>
+            <h2 style={{ fontSize: '24px', marginBottom: '16px', textAlign: 'center' }}>新規登録</h2>
+            <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label htmlFor="username" style={{ display: 'block', marginBottom: '4px' }}>ユーザー名</label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  required
+                  minLength={3}
+                  maxLength={50}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+              <div>
+                <label htmlFor="email" style={{ display: 'block', marginBottom: '4px' }}>メールアドレス</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+              <div>
+                <label htmlFor="password" style={{ display: 'block', marginBottom: '4px' }}>パスワード（8文字以上）</label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  required
+                  minLength={8}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                style={{
+                  backgroundColor: '#38a169',
+                  color: 'white',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.6 : 1,
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                {isLoading ? '登録中...' : '登録'}
+              </button>
+            </form>
           </div>
         )}
         
