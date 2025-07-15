@@ -109,6 +109,29 @@ function App() {
   const [showMapModal, setShowMapModal] = useState(false)
   const [mapMode, setMapMode] = useState<'start' | 'skill'>('start')
 
+  // Escキーでモーダルを閉じる
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showMapModal) {
+        setShowMapModal(false)
+      }
+    }
+    document.addEventListener('keydown', handleEsc)
+    return () => document.removeEventListener('keydown', handleEsc)
+  }, [showMapModal])
+
+  // モーダルが開いたときのbodyスクロール制御
+  useEffect(() => {
+    if (showMapModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showMapModal])
+
   // ファイルハンドリング関数
   const handleFileChange = (stepNumber: number, file: File | null) => {
     if (file && file.type.startsWith('image/')) {
@@ -2019,35 +2042,49 @@ function App() {
             
             {/* Interactive Map Modal */}
             {showMapModal && selectedMap && (
-              <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0, 0, 0, 0.9)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1000,
-                padding: '20px'
-              }}>
+              <div 
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.9)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  padding: '20px',
+                  overflowY: 'auto', // スクロール可能にする
+                  backdropFilter: 'blur(10px)'
+                }}
+                onClick={(e) => {
+                  // モーダル背景をクリックしたときに閉じる
+                  if (e.target === e.currentTarget) {
+                    setShowMapModal(false)
+                  }
+                }}
+              >
                 <div style={{
                   position: 'relative',
-                  maxWidth: '800px',
-                  width: '100%'
+                  maxWidth: '900px',
+                  width: '100%',
+                  maxHeight: '90vh', // 高さ制限を追加
+                  display: 'flex',
+                  flexDirection: 'column',
+                  margin: 'auto' // 垂直方向も中央揃え
                 }}>
                   {/* Close button */}
                   <button
                     onClick={() => setShowMapModal(false)}
                     style={{
                       position: 'absolute',
-                      top: '-40px',
+                      top: '-50px',
                       right: '0',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      background: 'rgba(255, 70, 85, 0.2)',
+                      border: '2px solid #ff4655',
                       borderRadius: '12px',
-                      padding: '8px 16px',
+                      padding: '12px 20px',
                       color: '#ffffff',
                       cursor: 'pointer',
                       fontSize: '16px',
@@ -2056,12 +2093,12 @@ function App() {
                       zIndex: 10
                     }}
                     onMouseEnter={(e) => {
-                      (e.target as HTMLButtonElement).style.background = 'rgba(255, 70, 85, 0.2)'
-                      ;(e.target as HTMLButtonElement).style.borderColor = '#ff4655'
+                      (e.target as HTMLButtonElement).style.background = '#ff4655'
+                      ;(e.target as HTMLButtonElement).style.transform = 'scale(1.05)'
                     }}
                     onMouseLeave={(e) => {
-                      (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.1)'
-                      ;(e.target as HTMLButtonElement).style.borderColor = 'rgba(255, 255, 255, 0.2)'
+                      (e.target as HTMLButtonElement).style.background = 'rgba(255, 70, 85, 0.2)'
+                      ;(e.target as HTMLButtonElement).style.transform = 'scale(1)'
                     }}
                   >
                     ✕ Close
