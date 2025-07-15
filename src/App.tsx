@@ -2110,6 +2110,7 @@ function App() {
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
               
               <div style={{ display: 'flex', gap: '20px', marginTop: '32px' }}>
