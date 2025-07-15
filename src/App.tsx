@@ -2055,9 +2055,8 @@ function App() {
                   padding: '20px',
                   overflowY: 'auto',
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'center',
-                  paddingTop: '10vh'
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
                 onClick={(e) => {
                   // モーダル背景をクリックしたときに閉じる
@@ -2068,16 +2067,17 @@ function App() {
               >
                 <div style={{
                   position: 'relative',
-                  maxWidth: '900px',
-                  width: '100%',
-                  maxHeight: '80vh', // スクロール可能な高さに調整
+                  maxWidth: '1000px',
+                  width: '90%',
+                  maxHeight: '80vh',
                   display: 'flex',
                   flexDirection: 'column',
-                  background: 'rgba(255, 255, 255, 0.05)', // 元のスタイルに戻す
+                  background: 'rgba(255, 255, 255, 0.05)',
                   padding: '20px',
                   borderRadius: '16px',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(10px)'
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
                 }}>
                   {/* Close button */}
                   <button
@@ -2108,7 +2108,6 @@ function App() {
                   >
                     ✕ Close
                   </button>
-                  
                   
                   <InteractiveMap
                       mapImageUrl={processImageUrl(maps.find(m => m.uuid === selectedMap)?.displayIcon || '')}
