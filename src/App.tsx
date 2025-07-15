@@ -1504,10 +1504,7 @@ function App() {
                     color: '#ffffff',
                     outline: 'none',
                     transition: 'all 0.3s ease',
-                    backdropFilter: 'blur(5px)',
-                    '::placeholder': {
-                      color: 'rgba(255, 255, 255, 0.5)'
-                    }
+                    backdropFilter: 'blur(5px)'
                   }}
                   onFocus={(e) => {
                     e.target.style.borderColor = '#ff4655'
@@ -2580,7 +2577,7 @@ function App() {
                       </div>
                       
                       {/* コネクター線 */}
-                      {index < selectedFixedPoint.steps.length - 1 && (
+                      {selectedFixedPoint.steps && index < selectedFixedPoint.steps.length - 1 && (
                         <div style={{
                           position: 'absolute',
                           left: '0',
