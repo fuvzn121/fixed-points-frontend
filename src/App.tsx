@@ -2055,8 +2055,10 @@ function App() {
                   padding: '20px',
                   overflowY: 'auto',
                   display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  alignItems: 'flex-start',
+                  justifyContent: 'center',
+                  paddingTop: '5vh',
+                  paddingBottom: '5vh'
                 }}
                 onClick={(e) => {
                   // モーダル背景をクリックしたときに閉じる
@@ -2069,7 +2071,7 @@ function App() {
                   position: 'relative',
                   maxWidth: '1000px',
                   width: '90%',
-                  maxHeight: '80vh',
+                  maxHeight: '90vh',
                   display: 'flex',
                   flexDirection: 'column',
                   background: 'rgba(255, 255, 255, 0.05)',
