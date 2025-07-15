@@ -91,10 +91,9 @@ function App() {
   }, [])
 
   const [isLoading, setIsLoading] = useState(false)
-  const [apiStatus, setApiStatus] = useState<{ message: string; isError: boolean } | null>(null)
   const [agents, setAgents] = useState<Agent[]>([])
   const [maps, setMaps] = useState<Map[]>([])
-  const [showData, setShowData] = useState<'none' | 'agents' | 'maps' | 'fixed-points' | 'create-fixed-point'>('none')
+  const [showData, setShowData] = useState<'none' | 'fixed-points' | 'create-fixed-point'>('none')
   const [showAuth, setShowAuth] = useState<'none' | 'login' | 'register'>('none')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('access_token'))
@@ -155,55 +154,6 @@ function App() {
     }
   }
 
-  const fetchAgents = async () => {
-    setIsLoading(true)
-    setShowData('agents')
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${apiUrl}/api/valorant/agents`)
-      const data = await response.json()
-      
-      if (response.ok) {
-        setAgents(data)
-        setApiStatus({
-          message: `Successfully loaded ${data.length} agents!`,
-          isError: false
-        })
-      }
-    } catch (error) {
-      setApiStatus({
-        message: 'Failed to load agents',
-        isError: true
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const fetchMaps = async () => {
-    setIsLoading(true)
-    setShowData('maps')
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${apiUrl}/api/valorant/maps`)
-      const data = await response.json()
-      
-      if (response.ok) {
-        setMaps(data)
-        setApiStatus({
-          message: `Successfully loaded ${data.length} maps!`,
-          isError: false
-        })
-      }
-    } catch (error) {
-      setApiStatus({
-        message: 'Failed to load maps',
-        isError: true
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -796,80 +746,6 @@ function App() {
           marginBottom: '24px' 
         }}>
           <button 
-            onClick={fetchAgents}
-            disabled={isLoading}
-            style={{
-              backgroundColor: 'rgba(128, 90, 213, 0.1)',
-              color: '#805ad5',
-              padding: '16px 32px',
-              minWidth: '180px',
-              borderRadius: '10px',
-              border: '1px solid #805ad5',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.6 : 1,
-              fontWeight: '600',
-              fontSize: '16px',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(5px)',
-              boxShadow: '0 4px 15px rgba(128, 90, 213, 0.2)'
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading) {
-                const target = e.target as HTMLButtonElement
-                target.style.backgroundColor = '#805ad5'
-                target.style.color = 'white'
-                target.style.transform = 'translateY(-2px)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isLoading) {
-                const target = e.target as HTMLButtonElement
-                target.style.backgroundColor = 'rgba(128, 90, 213, 0.1)'
-                target.style.color = '#805ad5'
-                target.style.transform = 'translateY(0)'
-              }
-            }}
-          >
-            {isLoading ? 'Loading...' : '🎯 Agents'}
-          </button>
-          <button 
-            onClick={fetchMaps}
-            disabled={isLoading}
-            style={{
-              backgroundColor: 'rgba(56, 161, 105, 0.1)',
-              color: '#38a169',
-              padding: '16px 32px',
-              minWidth: '180px',
-              borderRadius: '10px',
-              border: '1px solid #38a169',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.6 : 1,
-              fontWeight: '600',
-              fontSize: '16px',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(5px)',
-              boxShadow: '0 4px 15px rgba(56, 161, 105, 0.2)'
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading) {
-                const target = e.target as HTMLButtonElement
-                target.style.backgroundColor = '#38a169'
-                target.style.color = 'white'
-                target.style.transform = 'translateY(-2px)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!isLoading) {
-                const target = e.target as HTMLButtonElement
-                target.style.backgroundColor = 'rgba(56, 161, 105, 0.1)'
-                target.style.color = '#38a169'
-                target.style.transform = 'translateY(0)'
-              }
-            }}
-          >
-            {isLoading ? 'Loading...' : '🗺️ Maps'}
-          </button>
-          <button 
             onClick={fetchFixedPoints}
             disabled={isLoading}
             style={{
@@ -1105,93 +981,7 @@ function App() {
           </div>
         )}
         
-        {/* エージェント表示 */}
-        {showData === 'agents' && agents.length > 0 && (
-          <div>
-            <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>Agents</h2>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-              gap: '20px',
-              width: '100%' 
-            }}>
-              {agents.map((agent) => (
-                <div
-                  key={agent.uuid}
-                  style={{
-                    padding: '20px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    backgroundColor: 'white',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <img
-                      src={processImageUrl(agent.displayIcon)}
-                      alt={agent.displayName}
-                      style={{
-                        width: '100px',
-                        height: '100px',
-                        borderRadius: '8px',
-                        objectFit: 'cover',
-                        margin: '0 auto'
-                      }}
-                    />
-                    <h3 style={{ fontSize: '20px', textAlign: 'center', margin: 0 }}>{agent.displayName}</h3>
-                    {agent.role && (
-                      <p style={{ fontSize: '14px', color: '#718096', textAlign: 'center', margin: 0 }}>
-                        {agent.role.displayName}
-                      </p>
-                    )}
-                    <p style={{ fontSize: '14px', margin: 0 }}>{agent.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         
-        {/* マップ表示 */}
-        {showData === 'maps' && maps.length > 0 && (
-          <div>
-            <h2 style={{ fontSize: '32px', marginBottom: '16px' }}>Maps</h2>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', 
-              gap: '20px',
-              width: '100%' 
-            }}>
-              {maps.map((map) => (
-                <div
-                  key={map.uuid}
-                  style={{
-                    padding: '20px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    backgroundColor: 'white',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <img
-                      src={processImageUrl(map.splash)}
-                      alt={map.displayName}
-                      style={{
-                        width: '100%',
-                        height: '200px',
-                        borderRadius: '8px',
-                        objectFit: 'cover'
-                      }}
-                    />
-                    <h3 style={{ fontSize: '20px', margin: 0 }}>{map.displayName}</h3>
-                    <p style={{ fontSize: '14px', color: '#718096', margin: 0 }}>{map.coordinates}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         
         {/* Fixed Points List Display */}
         {showData === 'fixed-points' && (
