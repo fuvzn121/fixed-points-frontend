@@ -2522,23 +2522,24 @@ function App() {
                       <div style={{
                         position: 'absolute',
                         top: '24px',
-                        left: '-40px',
-                        width: '80px',
-                        height: '80px',
+                        left: '24px',
+                        width: '60px',
+                        height: '60px',
                         background: 'linear-gradient(135deg, #ff4655, #ff4655)',
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '32px',
+                        fontSize: '24px',
                         fontWeight: '800',
                         color: '#ffffff',
-                        boxShadow: '0 8px 24px rgba(255, 70, 85, 0.4)'
+                        boxShadow: '0 8px 24px rgba(255, 70, 85, 0.4)',
+                        zIndex: 1
                       }}>
                         {step.step_order}
                       </div>
                       
-                      <div style={{ marginLeft: '60px' }}>
+                      <div style={{ marginLeft: '100px' }}>
                         {step.image_url && (
                           <div style={{ 
                             marginBottom: '16px',
@@ -2580,12 +2581,11 @@ function App() {
                       {selectedFixedPoint.steps && index < selectedFixedPoint.steps.length - 1 && (
                         <div style={{
                           position: 'absolute',
-                          left: '0',
+                          left: '52px',
                           bottom: '-20px',
                           width: '2px',
                           height: '40px',
-                          background: 'linear-gradient(180deg, rgba(255, 70, 85, 0.3), transparent)',
-                          marginLeft: '20px'
+                          background: 'linear-gradient(180deg, rgba(255, 70, 85, 0.3), transparent)'
                         }} />
                       )}
                     </div>
