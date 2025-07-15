@@ -91,6 +91,7 @@ function App() {
   }, [])
 
   const [isLoading, setIsLoading] = useState(false)
+  const [apiStatus, setApiStatus] = useState<{ message: string; isError: boolean } | null>(null)
   const [agents, setAgents] = useState<Agent[]>([])
   const [maps, setMaps] = useState<Map[]>([])
   const [showData, setShowData] = useState<'none' | 'fixed-points' | 'create-fixed-point'>('none')
