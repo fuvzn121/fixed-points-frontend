@@ -2050,15 +2050,14 @@ function App() {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  background: 'rgba(0, 0, 0, 0.9)',
-                  zIndex: 1000,
+                  background: 'rgba(0, 0, 0, 0.9)', // 元の黒色に戻す
+                  zIndex: 9999, // より高いzIndex
                   padding: '20px',
                   overflowY: 'auto',
-                  backdropFilter: 'blur(10px)',
                   display: 'flex',
-                  alignItems: 'flex-start',
+                  alignItems: 'center',
                   justifyContent: 'center',
-                  paddingTop: '5vh'
+                  minHeight: '100vh' // 全画面の高さを確保
                 }}
                 onClick={(e) => {
                   // モーダル背景をクリックしたときに閉じる
@@ -2071,9 +2070,14 @@ function App() {
                   position: 'relative',
                   maxWidth: '900px',
                   width: '100%',
-                  maxHeight: '85vh',
+                  maxHeight: '90vh', // 元に戻す
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  background: 'rgba(255, 255, 255, 0.05)', // 元のスタイルに戻す
+                  padding: '20px',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)'
                 }}>
                   {/* Close button */}
                   <button
@@ -2105,26 +2109,27 @@ function App() {
                     ✕ Close
                   </button>
                   
+                  
                   <InteractiveMap
-                    mapImageUrl={processImageUrl(maps.find(m => m.uuid === selectedMap)?.displayIcon || '')}
-                    mapName={maps.find(m => m.uuid === selectedMap)?.displayName || ''}
-                    mode={mapMode}
-                    startPosition={startPosition}
-                    skillPosition={skillPosition}
-                    onPositionSelect={(pos) => {
-                      setStartPosition(pos)
-                      // 自動的にスキルモードに切り替え
-                      if (!skillPosition) {
-                        setMapMode('skill')
-                      } else {
+                      mapImageUrl={processImageUrl(maps.find(m => m.uuid === selectedMap)?.displayIcon || '')}
+                      mapName={maps.find(m => m.uuid === selectedMap)?.displayName || ''}
+                      mode={mapMode}
+                      startPosition={startPosition}
+                      skillPosition={skillPosition}
+                      onPositionSelect={(pos) => {
+                        setStartPosition(pos)
+                        // 自動的にスキルモードに切り替え
+                        if (!skillPosition) {
+                          setMapMode('skill')
+                        } else {
+                          setShowMapModal(false)
+                        }
+                      }}
+                      onSkillPositionSelect={(pos) => {
+                        setSkillPosition(pos)
                         setShowMapModal(false)
-                      }
-                    }}
-                    onSkillPositionSelect={(pos) => {
-                      setSkillPosition(pos)
-                      setShowMapModal(false)
-                    }}
-                  />
+                      }}
+                    />
                 </div>
               </div>
             )}
