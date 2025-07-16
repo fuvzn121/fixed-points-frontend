@@ -1,6 +1,7 @@
 import React from 'react'
 import { FixedPoint, Agent, Map } from '../../types'
 import Button from '../common/Button'
+import { processImageUrl } from '../../utils/imageUrl'
 
 interface FixedPointCardProps {
   fixedPoint: FixedPoint
@@ -61,7 +62,7 @@ const FixedPointCard: React.FC<FixedPointCardProps> = ({
             {agent && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <img
-                  src={agent.displayIcon}
+                  src={processImageUrl(agent.displayIcon)}
                   alt={agent.displayName}
                   style={{
                     width: '24px',

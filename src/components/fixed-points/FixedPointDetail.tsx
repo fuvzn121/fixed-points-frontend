@@ -60,7 +60,7 @@ const FixedPointDetail: React.FC<FixedPointDetailProps> = ({
           {agent && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <img
-                src={agent.displayIcon}
+                src={processImageUrl(agent.displayIcon)}
                 alt={agent.displayName}
                 style={{
                   width: '48px',
