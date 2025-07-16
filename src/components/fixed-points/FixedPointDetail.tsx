@@ -123,7 +123,7 @@ const FixedPointDetail: React.FC<FixedPointDetailProps> = ({
             Position Overview
           </h3>
           <MapDisplay
-            mapImageUrl={map.splash}
+            mapImageUrl={processImageUrl(map.displayIcon)}
             mapName={map.displayName}
             startPosition={
               firstStep.position_x !== null && firstStep.position_y !== null
@@ -194,6 +194,10 @@ const FixedPointDetail: React.FC<FixedPointDetailProps> = ({
                   <img
                     src={processImageUrl(step.image_url)}
                     alt={`Step ${step.step_order}`}
+                    onError={(e) => {
+                      console.error('Failed to load step image:', step.image_url)
+                      console.error('Processed URL:', processImageUrl(step.image_url))
+                    }}
                     style={{
                       width: '100%',
                       maxWidth: '800px',
