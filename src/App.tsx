@@ -109,7 +109,6 @@ function App() {
   const [skillPosition, setSkillPosition] = useState<{ x: number; y: number } | null>(null)
   const [showMapModal, setShowMapModal] = useState(false)
   const [mapMode, setMapMode] = useState<'start' | 'skill'>('start')
-  const [apiStatus, setApiStatus] = useState<{ message: string; isError: boolean } | null>(null)
 
   // Escキーでモーダルを閉じる
   useEffect(() => {
