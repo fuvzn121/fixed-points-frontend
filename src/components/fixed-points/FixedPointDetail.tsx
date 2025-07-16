@@ -197,12 +197,9 @@ const FixedPointDetail: React.FC<FixedPointDetailProps> = ({
                 )}
                 
                 {step.image_url && (
-                  <>
-                    {console.log(`Step ${step.step_order} image_url:`, step.image_url)}
-                    {console.log(`Processed URL:`, processImageUrl(step.image_url))}
-                    <img
-                      src={processImageUrl(step.image_url)}
-                      alt={`Step ${step.step_order}`}
+                  <img
+                    src={processImageUrl(step.image_url)}
+                    alt={`Step ${step.step_order}`}
                       onError={(e) => {
                         console.error('Failed to load step image:', step.image_url)
                         console.error('Processed URL:', processImageUrl(step.image_url))
@@ -216,7 +213,6 @@ const FixedPointDetail: React.FC<FixedPointDetailProps> = ({
                       border: '1px solid rgba(255, 255, 255, 0.2)',
                     }}
                   />
-                  </>
                 )}
               </div>
             )})}
