@@ -176,6 +176,10 @@ function App() {
       for (let i = 1; i <= 5; i++) {
         const description = formData.get(`step${i}_description`) as string
         const imageFile = formData.get(`step${i}_image`) as File
+        
+        console.log(`Step ${i} - Description:`, description)
+        console.log(`Step ${i} - Image file:`, imageFile)
+        console.log(`Step ${i} - Image size:`, imageFile?.size)
 
         if (description || (imageFile && imageFile.size > 0)) {
           let imageUrl = null
@@ -235,6 +239,7 @@ function App() {
       }
 
       console.log('Creating fixed point with data:', requestData)
+      console.log('Steps detail:', requestData.steps)
       await fixedPointsService.create(requestData, accessToken)
 
       setFixedPointsApiStatus({
