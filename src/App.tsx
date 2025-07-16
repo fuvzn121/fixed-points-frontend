@@ -441,7 +441,7 @@ function App() {
               ✕ Close (ESC)
             </button>
             <InteractiveMap
-              mapImageUrl={maps.find((m) => m.uuid === selectedMap)?.splash || ''}
+              mapImageUrl={processImageUrl(maps.find((m) => m.uuid === selectedMap)?.displayIcon || '')}
               mapName={maps.find((m) => m.uuid === selectedMap)?.displayName || ''}
               onPositionSelect={(position) => {
                 if (mapMode === 'start') {
