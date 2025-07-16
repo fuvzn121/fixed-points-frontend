@@ -46,12 +46,26 @@ const CreateFixedPointForm: React.FC<CreateFixedPointFormProps> = ({
         setStepPreviews((prev) => ({ ...prev, [stepNumber]: reader.result as string }))
       }
       reader.readAsDataURL(file)
+      
+      // Set file to input element
+      const input = document.getElementById(`step${stepNumber}_image`) as HTMLInputElement
+      if (input) {
+        const dataTransfer = new DataTransfer()
+        dataTransfer.items.add(file)
+        input.files = dataTransfer.files
+      }
     } else if (!file) {
       setStepPreviews((prev) => {
         const newPreviews = { ...prev }
         delete newPreviews[stepNumber]
         return newPreviews
       })
+      
+      // Clear input element
+      const input = document.getElementById(`step${stepNumber}_image`) as HTMLInputElement
+      if (input) {
+        input.value = ''
+      }
     }
   }
 
