@@ -586,9 +586,11 @@ function App() {
   }, [apiStatus])
 
   // 初回読み込み時の処理
-  useState(() => {
+  useEffect(() => {
+    let isMounted = true
+    
     // ユーザー情報を取得
-    if (accessToken) {
+    if (accessToken && isMounted) {
       fetchCurrentUser()
     }
     // エージェントとマップ情報を事前に取得
@@ -598,9 +600,11 @@ function App() {
       // エージェント情報を取得
       try {
         const agentsResponse = await fetch(`${apiUrl}/api/valorant/agents`)
-        if (agentsResponse.ok) {
+        if (agentsResponse.ok && isMounted) {
           const agentsData = await agentsResponse.json()
-          setAgents(agentsData)
+          if (isMounted) {
+            setAgents(agentsData)
+          }
         }
       } catch (error) {
         console.error('Failed to fetch agents:', error)
@@ -609,9 +613,11 @@ function App() {
       // マップ情報を取得
       try {
         const mapsResponse = await fetch(`${apiUrl}/api/valorant/maps`)
-        if (mapsResponse.ok) {
+        if (mapsResponse.ok && isMounted) {
           const mapsData = await mapsResponse.json()
-          setMaps(mapsData)
+          if (isMounted) {
+            setMaps(mapsData)
+          }
         }
       } catch (error) {
         console.error('Failed to fetch maps:', error)
@@ -619,7 +625,11 @@ function App() {
     }
     
     loadInitialData()
-  })
+    
+    return () => {
+      isMounted = false
+    }
+  }, [accessToken])
 
   return (
     <div style={{ 
