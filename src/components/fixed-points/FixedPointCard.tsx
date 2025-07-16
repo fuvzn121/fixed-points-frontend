@@ -1,5 +1,5 @@
 import React from 'react'
-import { FixedPoint, Agent, Map } from '../../types'
+import { FixedPoint, Agent, Map } from '../../models'
 import Button from '../common/Button'
 
 interface FixedPointCardProps {

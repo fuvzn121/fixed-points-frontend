@@ -1,5 +1,5 @@
 import React from 'react'
-import { User } from '../../types'
+import { User } from '../../models'
 import Button from '../common/Button'
 
 interface UserInfoProps {

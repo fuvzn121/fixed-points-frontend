@@ -1,5 +1,5 @@
 import React from 'react'
-import { MapPosition } from '../../types'
+import { MapPosition } from '../../models'
 import Button from '../common/Button'
 
 interface MapPositionSelectorProps {

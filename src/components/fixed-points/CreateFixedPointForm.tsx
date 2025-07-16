@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Agent, Map, MapPosition } from '../../types'
+import { Agent, Map, MapPosition } from '../../models'
 import Button from '../common/Button'
 import StepInput from './StepInput'
 import MapPositionSelector from './MapPositionSelector'
