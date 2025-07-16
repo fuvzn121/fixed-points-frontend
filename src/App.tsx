@@ -182,8 +182,18 @@ function App() {
 
           // Upload image if present
           if (imageFile && imageFile.size > 0) {
-            imageUrl = await fixedPointsService.uploadImage(imageFile, accessToken)
-            console.log(`Step ${i} image uploaded:`, imageUrl)
+            try {
+              imageUrl = await fixedPointsService.uploadImage(imageFile, accessToken)
+              console.log(`Step ${i} image uploaded:`, imageUrl)
+            } catch (error) {
+              console.error(`Failed to upload image for step ${i}:`, error)
+              setFixedPointsApiStatus({
+                message: `Failed to upload image for step ${i}`,
+                isError: true,
+              })
+              setIsCreating(false)
+              return
+            }
           }
 
           const stepData: any = {
@@ -224,6 +234,7 @@ function App() {
         steps: steps,
       }
 
+      console.log('Creating fixed point with data:', requestData)
       await fixedPointsService.create(requestData, accessToken)
 
       setFixedPointsApiStatus({
