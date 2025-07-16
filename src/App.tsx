@@ -109,6 +109,7 @@ function App() {
   const [skillPosition, setSkillPosition] = useState<{ x: number; y: number } | null>(null)
   const [showMapModal, setShowMapModal] = useState(false)
   const [mapMode, setMapMode] = useState<'start' | 'skill'>('start')
+  const [apiStatus, setApiStatus] = useState<{ message: string; isError: boolean } | null>(null)
 
   // Escキーでモーダルを閉じる
   useEffect(() => {
@@ -572,6 +573,17 @@ function App() {
       setIsLoading(false)
     }
   }
+
+  // APIステータスメッセージを自動的に消す
+  useEffect(() => {
+    if (apiStatus) {
+      const timer = setTimeout(() => {
+        setApiStatus(null)
+      }, 5000) // 5秒後に消す
+      
+      return () => clearTimeout(timer)
+    }
+  }, [apiStatus])
 
   // 初回読み込み時の処理
   useState(() => {
