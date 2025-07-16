@@ -40,6 +40,7 @@ export const useFixedPoints = (accessToken: string | null) => {
     setIsLoading(true)
     try {
       const data = await fixedPointsService.getAll(accessToken)
+      console.log('Fixed points fetched:', data)
       setFixedPoints(data)
       setApiStatus({
         message: `Successfully loaded ${data.length} fixed points!`,

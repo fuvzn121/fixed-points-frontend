@@ -183,6 +183,7 @@ function App() {
           // Upload image if present
           if (imageFile && imageFile.size > 0) {
             imageUrl = await fixedPointsService.uploadImage(imageFile, accessToken)
+            console.log(`Step ${i} image uploaded:`, imageUrl)
           }
 
           const stepData: any = {
