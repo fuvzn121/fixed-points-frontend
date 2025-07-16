@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { FixedPoint, Agent, Map, ApiStatus } from '../models'
+import { FixedPoint, Agent, Map, ApiStatus } from '../types'
 import { fixedPointsService } from '../services/fixedPoints.service'
 
 export const useFixedPoints = (accessToken: string | null) => {

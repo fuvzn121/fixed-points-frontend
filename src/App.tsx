@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { MapPosition, FixedPoint } from './models'
+import { MapPosition, FixedPoint } from './types'
 import { useAuth } from './hooks/useAuth'
 import { useFixedPoints } from './hooks/useFixedPoints'
 import { fixedPointsService, CreateFixedPointData } from './services/fixedPoints.service'

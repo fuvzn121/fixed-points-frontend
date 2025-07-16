@@ -1,5 +1,5 @@
 import React from 'react'
-import { ApiStatus } from '../../models'
+import { ApiStatus } from '../../types'
 
 interface StatusMessageProps {
   status: ApiStatus | null

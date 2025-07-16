@@ -1,4 +1,4 @@
-import { FixedPoint, Agent, Map } from '../models'
+import { FixedPoint, Agent, Map } from '../types'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 

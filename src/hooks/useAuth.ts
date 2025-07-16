@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { User, ApiStatus } from '../models'
+import { User, ApiStatus } from '../types'
 import { authService, LoginData, RegisterData } from '../services/auth.service'
 
 export const useAuth = () => {
