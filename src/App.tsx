@@ -14,6 +14,7 @@ import FixedPointList from './components/fixed-points/FixedPointList'
 import FixedPointDetail from './components/fixed-points/FixedPointDetail'
 import CreateFixedPointForm from './components/fixed-points/CreateFixedPointForm'
 import InteractiveMap from './InteractiveMap'
+import { processImageUrl } from './utils/imageUrl'
 
 function App() {
   // Auth state

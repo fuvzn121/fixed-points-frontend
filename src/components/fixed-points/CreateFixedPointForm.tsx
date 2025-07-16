@@ -3,6 +3,9 @@ import { Agent, Map, MapPosition } from '../../types'
 import Button from '../common/Button'
 import StepInput from './StepInput'
 import MapPositionSelector from './MapPositionSelector'
+import AgentSelector from '../agent/AgentSelector'
+import MapSelector from '../map/MapSelector'
+import { processImageUrl } from '../../utils/imageUrl'
 
 interface CreateFixedPointFormProps {
   agents: Agent[]
@@ -82,145 +85,65 @@ const CreateFixedPointForm: React.FC<CreateFixedPointFormProps> = ({
 
   return (
     <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '20px',
-        }}
-      >
-        {/* Title Input */}
-        <div>
-          <label
-            htmlFor="title"
-            style={{
-              display: 'block',
-              marginBottom: '8px',
-              color: '#b0b8c1',
-              fontSize: '14px',
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}
-          >
-            Title
-          </label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            required
-            maxLength={100}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '8px',
-              fontSize: '16px',
-              color: '#ffffff',
-              outline: 'none',
-              transition: 'all 0.3s ease',
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#ff4655'
-              e.target.style.boxShadow = '0 0 0 3px rgba(255, 70, 85, 0.1)'
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)'
-              e.target.style.boxShadow = 'none'
-            }}
-          />
-        </div>
-
-        {/* Agent Select */}
-        <div>
-          <label
-            htmlFor="agent"
-            style={{
-              display: 'block',
-              marginBottom: '8px',
-              color: '#b0b8c1',
-              fontSize: '14px',
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}
-          >
-            Agent
-          </label>
-          <select
-            id="agent"
-            value={selectedAgent}
-            onChange={(e) => onAgentChange(e.target.value)}
-            required
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '8px',
-              fontSize: '16px',
-              color: '#ffffff',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="" style={{ background: '#1a2332' }}>
-              Select an agent...
-            </option>
-            {agents.map((agent) => (
-              <option key={agent.uuid} value={agent.uuid} style={{ background: '#1a2332' }}>
-                {agent.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Map Select */}
-        <div>
-          <label
-            htmlFor="map"
-            style={{
-              display: 'block',
-              marginBottom: '8px',
-              color: '#b0b8c1',
-              fontSize: '14px',
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}
-          >
-            Map
-          </label>
-          <select
-            id="map"
-            value={selectedMap}
-            onChange={(e) => onMapChange(e.target.value)}
-            required
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '8px',
-              fontSize: '16px',
-              color: '#ffffff',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="" style={{ background: '#1a2332' }}>
-              Select a map...
-            </option>
-            {maps.map((map) => (
-              <option key={map.uuid} value={map.uuid} style={{ background: '#1a2332' }}>
-                {map.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Title Input */}
+      <div style={{ marginBottom: '20px' }}>
+        <label
+          htmlFor="title"
+          style={{
+            display: 'block',
+            marginBottom: '8px',
+            color: '#b0b8c1',
+            fontSize: '14px',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+          }}
+        >
+          Title
+        </label>
+        <input
+          type="text"
+          id="title"
+          name="title"
+          required
+          maxLength={100}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '8px',
+            fontSize: '16px',
+            color: '#ffffff',
+            outline: 'none',
+            transition: 'all 0.3s ease',
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = '#ff4655'
+            e.target.style.boxShadow = '0 0 0 3px rgba(255, 70, 85, 0.1)'
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)'
+            e.target.style.boxShadow = 'none'
+          }}
+        />
       </div>
+
+      {/* Agent Selector */}
+      <AgentSelector
+        agents={agents}
+        selectedAgent={selectedAgent}
+        onAgentSelect={onAgentChange}
+        processImageUrl={processImageUrl}
+      />
+
+      {/* Map Selector */}
+      <MapSelector
+        maps={maps}
+        selectedMap={selectedMap}
+        onMapSelect={onMapChange}
+        processImageUrl={processImageUrl}
+      />
 
       {/* Map Position Selector */}
       {selectedMap && (
