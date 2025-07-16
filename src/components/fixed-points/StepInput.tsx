@@ -128,8 +128,6 @@ const StepInput: React.FC<StepInputProps> = ({
                   type="button"
                   onClick={() => {
                     onFileChange(stepNumber, null)
-                    const input = document.getElementById(`step${stepNumber}_image`) as HTMLInputElement
-                    if (input) input.value = ''
                   }}
                   style={{
                     position: 'absolute',

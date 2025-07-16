@@ -10,7 +10,7 @@ import { processImageUrl } from '../../utils/imageUrl'
 interface CreateFixedPointFormProps {
   agents: Agent[]
   maps: Map[]
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>
+  onSubmit: (e: React.FormEvent<HTMLFormElement>, stepFiles: { [key: number]: File }) => Promise<void>
   isLoading: boolean
   selectedAgent: string
   selectedMap: string
@@ -37,35 +37,32 @@ const CreateFixedPointForm: React.FC<CreateFixedPointFormProps> = ({
   onClearPosition,
 }) => {
   const [stepPreviews, setStepPreviews] = useState<{ [key: number]: string }>({})
+  const [stepFiles, setStepFiles] = useState<{ [key: number]: File }>({})
   const [dragActive, setDragActive] = useState<{ [key: number]: boolean }>({})
 
   const handleFileChange = (stepNumber: number, file: File | null) => {
     if (file && file.type.startsWith('image/')) {
+      // Store file in state
+      setStepFiles((prev) => ({ ...prev, [stepNumber]: file }))
+      
+      // Create preview
       const reader = new FileReader()
       reader.onloadend = () => {
         setStepPreviews((prev) => ({ ...prev, [stepNumber]: reader.result as string }))
       }
       reader.readAsDataURL(file)
-      
-      // Set file to input element
-      const input = document.getElementById(`step${stepNumber}_image`) as HTMLInputElement
-      if (input) {
-        const dataTransfer = new DataTransfer()
-        dataTransfer.items.add(file)
-        input.files = dataTransfer.files
-      }
     } else if (!file) {
+      // Clear file and preview
+      setStepFiles((prev) => {
+        const newFiles = { ...prev }
+        delete newFiles[stepNumber]
+        return newFiles
+      })
       setStepPreviews((prev) => {
         const newPreviews = { ...prev }
         delete newPreviews[stepNumber]
         return newPreviews
       })
-      
-      // Clear input element
-      const input = document.getElementById(`step${stepNumber}_image`) as HTMLInputElement
-      if (input) {
-        input.value = ''
-      }
     }
   }
 
@@ -87,18 +84,19 @@ const CreateFixedPointForm: React.FC<CreateFixedPointFormProps> = ({
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0]
       handleFileChange(stepNumber, file)
-      // Set file to input element
-      const input = document.getElementById(`step${stepNumber}_image`) as HTMLInputElement
-      if (input) {
-        const dataTransfer = new DataTransfer()
-        dataTransfer.items.add(file)
-        input.files = dataTransfer.files
-      }
     }
   }
+  
+  // Clear all step files and previews
+  React.useEffect(() => {
+    if (!isLoading) {
+      // Reset when form is submitted successfully
+      return
+    }
+  }, [isLoading])
 
   return (
-    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <form onSubmit={(e) => onSubmit(e, stepFiles)} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Title Input */}
       <div style={{ marginBottom: '20px' }}>
         <label

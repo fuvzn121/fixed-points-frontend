@@ -146,7 +146,7 @@ function App() {
     }
   }
 
-  const handleCreateFixedPoint = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateFixedPoint = async (e: React.FormEvent<HTMLFormElement>, stepFiles: { [key: number]: File }) => {
     e.preventDefault()
     if (!accessToken) {
       setFixedPointsApiStatus({
@@ -175,7 +175,7 @@ function App() {
       const steps = []
       for (let i = 1; i <= 5; i++) {
         const description = formData.get(`step${i}_description`) as string
-        const imageFile = formData.get(`step${i}_image`) as File
+        const imageFile = stepFiles[i]
         
         console.log(`Step ${i} - Description:`, description)
         console.log(`Step ${i} - Image file:`, imageFile)
