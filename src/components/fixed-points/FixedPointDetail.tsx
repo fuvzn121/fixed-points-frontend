@@ -20,6 +20,10 @@ const FixedPointDetail: React.FC<FixedPointDetailProps> = ({
 }) => {
   const agent = agents.find((a) => a.uuid === fixedPoint.character_id)
   const map = maps.find((m) => m.uuid === fixedPoint.map_id)
+  
+  // デバッグ用
+  console.log('Fixed point detail:', fixedPoint)
+  console.log('Steps:', fixedPoint.steps)
 
   // Get the first step with position data
   const firstStep = fixedPoint.steps?.[0]
@@ -155,7 +159,9 @@ const FixedPointDetail: React.FC<FixedPointDetailProps> = ({
             Steps
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            {fixedPoint.steps.map((step) => (
+            {fixedPoint.steps.map((step) => {
+              console.log(`Rendering step ${step.step_order}:`, step)
+              return (
               <div
                 key={step.id}
                 style={{
@@ -191,13 +197,17 @@ const FixedPointDetail: React.FC<FixedPointDetailProps> = ({
                 )}
                 
                 {step.image_url && (
-                  <img
-                    src={processImageUrl(step.image_url)}
-                    alt={`Step ${step.step_order}`}
-                    onError={(e) => {
-                      console.error('Failed to load step image:', step.image_url)
-                      console.error('Processed URL:', processImageUrl(step.image_url))
-                    }}
+                  <>
+                    {console.log(`Step ${step.step_order} image_url:`, step.image_url)}
+                    {console.log(`Processed URL:`, processImageUrl(step.image_url))}
+                    <img
+                      src={processImageUrl(step.image_url)}
+                      alt={`Step ${step.step_order}`}
+                      onError={(e) => {
+                        console.error('Failed to load step image:', step.image_url)
+                        console.error('Processed URL:', processImageUrl(step.image_url))
+                        console.error('Image element:', e.currentTarget)
+                      }}
                     style={{
                       width: '100%',
                       maxWidth: '800px',
@@ -206,9 +216,10 @@ const FixedPointDetail: React.FC<FixedPointDetailProps> = ({
                       border: '1px solid rgba(255, 255, 255, 0.2)',
                     }}
                   />
+                  </>
                 )}
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}
